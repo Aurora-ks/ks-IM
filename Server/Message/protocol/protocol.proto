@@ -1,0 +1,22 @@
+syntax = "proto3";
+option go_package="./;protocol";
+
+package protocol;
+
+// 28 Bytes Header
+message Packet{
+  fixed64 seq = 1;
+  fixed64 timestamp = 2;
+  fixed32 cmd = 3;
+  fixed32 msg_type = 4;
+  fixed32 data_length = 5;
+  bytes data = 6;
+}
+
+message Msg{
+  int64 conversation_id = 1;
+  int64 sender_id = 2;
+  int64 receiver_id = 3;
+  int32 content_type = 4;
+  bytes content = 5;
+}

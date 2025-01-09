@@ -1,0 +1,21 @@
+server:
+  name: "message"
+  id: "message1"
+  machine_id: 101
+  port: 9999
+consul:
+  host: "127.0.0.1"
+  port: 8500
+mysql:
+  host: "139.199.221.81"
+  port: 3306
+  user: "root"
+  password: "2004131"
+  db: "IM"
+  max_connections: 10
+  max_idle_connections: 5
+redis:
+  host: "139.199.221.81"
+  port: 6379
+  password: "2004131"
+  db: 0

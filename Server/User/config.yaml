@@ -1,0 +1,30 @@
+server:
+  name: "user"
+  id: "user1"
+  port: 9000
+  file_save_relative_path: "."
+consul:
+#  host: "139.199.221.81"
+  host: "127.0.0.1"
+  port: 8500
+
+mysql:
+  host: "139.199.221.81"
+  port: 3306
+  user: "root"
+  password: "2004131"
+  db: "IM"
+  max_connections: 10
+  max_idle_connections: 5
+
+redis:
+  host: "139.199.221.81"
+  port: 6379
+  password: "2004131"
+  db: 0
+
+email:
+  host: "smtp.qq.com"
+  port: 587
+  from: "2736133099@qq.com"
+  password: "cknylcvkwvhpdcee"

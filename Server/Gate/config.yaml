@@ -1,0 +1,7 @@
+server:
+  name: "gate"
+  id: "gate"
+  port: 80
+consul:
+  host: "127.0.0.1"
+  port: 8500
