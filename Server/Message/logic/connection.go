@@ -201,7 +201,7 @@ func dispatchMessage(data []byte, con *Connection) {
 	case CmdACK:
 		handlACK(p.Seq)
 	case CmdSC:
-		SingleChatRequest(con, p)
+		SingleChatHandler(con, p)
 	case CmdGC:
 	default:
 		con.SendError(p.Seq, p.Cmd)

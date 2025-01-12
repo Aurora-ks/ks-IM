@@ -3,8 +3,6 @@ package mysql
 import (
 	"Message/log"
 	"Message/protocol"
-	"Message/utils"
-
 	//"Message/model"
 	"Message/settings"
 	"database/sql"
@@ -35,17 +33,38 @@ func Close() {
 	_ = db.Close()
 }
 
+// SaveMessage 存储新消息
 func SaveMessage(msg *protocol.Msg) (err error) {
-	msgID, err := utils.GenID(settings.Conf.MachineID)
-	if err != nil {
-		return
-	}
-	_, err = db.Exec("INSERT INTO messages(id, sender_id, receiver_id, msg_type,msg_content) VALUES (?, ?, ?, ?, ?)",
-		msgID, msg.SenderId, msg.ReceiverId, msg.ContentType, msg.Content)
+	stm := "INSERT INTO messages(id, sender_id, receiver_id, msg_type, msg_content) VALUES (?, ?, ?, ?, ?)"
+	// 插入消息
+	_, err = db.Exec(stm, msg.MsgId, msg.SenderId, msg.ReceiverId, msg.ContentType, msg.Content)
 	return
 }
 
-func UpdateConversation(msg *protocol.Msg) (err error) {
-	_, err = db.Exec("UPDATE conversations SET last_ack_msg_id = ?, WHERE `id` = ?", msg.ConversationId, msg.ConversationId)
+func UpdateConversation(cid, mid uint64) (err error) {
+	stm := "UPDATE conversations SET last_ack_msg_id = ? WHERE id = ?"
+	_, err = db.Exec(stm, mid, cid)
+	return
+}
+
+func CreateNewConversation(uid uint64, pid uint64, isGroup bool) (cid uint64, err error) {
+	grp := 0
+	if isGroup {
+		grp = 1
+	}
+
+	stm := "INSERT INTO conversations(user_id, peer_id, is_group) VALUES (?, ?, ?)"
+	res, err := db.Exec(stm, uid, pid, grp)
+	if err != nil {
+		return
+	}
+	id, err := res.LastInsertId()
+	cid = uint64(id)
+	return
+}
+
+func GetConversationID(uid, peerID uint64) (cid uint64, err error) {
+	stm := "SELECT id FROM conversations WHERE user_id = ? AND peer_id = ?"
+	err = db.QueryRow(stm, uid, peerID).Scan(&cid)
 	return
 }
