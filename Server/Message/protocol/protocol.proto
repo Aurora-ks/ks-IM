@@ -22,3 +22,7 @@ message Msg{
   bool is_group = 6;
   bytes content = 7;
 }
+// 服务端收到单聊消息请求的回应
+message MsgACKResponse_S{
+  uint64 msg_id = 1;
+}

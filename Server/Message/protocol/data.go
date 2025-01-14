@@ -29,3 +29,6 @@ func DecodeMsg(data []byte) (m *Msg, err error) {
 	err = proto.Unmarshal(data, m)
 	return
 }
+func EncodeMsgACKRes_S(m *MsgACKResponse_S) (data []byte, err error) {
+	return proto.Marshal(m)
+}

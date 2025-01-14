@@ -96,8 +96,14 @@ func requestSC(con *Connection, p *protocol.Packet) {
 		con.SendError(p.Seq, p.Cmd)
 		return
 	}
-	// 发送ACK
-	con.SendACK(p.Seq, p.Cmd)
+	// 发送ACK附带消息ID
+	data, err := protocol.EncodeMsgACKRes_S(&protocol.MsgACKResponse_S{MsgId: m.MsgId})
+	if err != nil {
+		log.L().Error("Encode MsgACKRes_S", log.Error(err), log.Any("msg", p))
+		con.SendError(p.Seq, p.Cmd)
+		return
+	}
+	con.Send(p.Seq, p.Cmd, MsgTypeACK, data)
 	// 发送新消息通知
 	SingleChatNotify(m)
 }
