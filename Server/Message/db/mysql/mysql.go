@@ -40,13 +40,11 @@ func SaveMessage(msg *protocol.Msg) (err error) {
 	_, err = db.Exec(stm, msg.MsgId, msg.SenderId, msg.ReceiverId, msg.ContentType, msg.Content)
 	return
 }
-
 func UpdateConversation(cid, mid uint64) (err error) {
 	stm := "UPDATE conversations SET last_ack_msg_id = ? WHERE id = ?"
 	_, err = db.Exec(stm, mid, cid)
 	return
 }
-
 func CreateNewConversation(uid uint64, pid uint64, isGroup bool) (cid uint64, err error) {
 	grp := 0
 	if isGroup {
@@ -62,9 +60,13 @@ func CreateNewConversation(uid uint64, pid uint64, isGroup bool) (cid uint64, er
 	cid = uint64(id)
 	return
 }
-
 func GetConversationID(uid, peerID uint64) (cid uint64, err error) {
 	stm := "SELECT id FROM conversations WHERE user_id = ? AND peer_id = ?"
 	err = db.QueryRow(stm, uid, peerID).Scan(&cid)
+	return
+}
+func DelMsg(mid uint64) (err error) {
+	stm := "DELETE FROM messages WHERE id = ?"
+	_, err = db.Exec(stm, mid)
 	return
 }

@@ -24,7 +24,7 @@ var (
 
 // GenID 生成消息ID
 // 返回生成的ID和可能的错误
-func GenID(nid int64) (int64, error) {
+func GenID(nid int64) (uint64, error) {
 	// 检查节点ID是否在有效范围内
 	if nid < 0 || nid > nodeMax {
 		return 0, fmt.Errorf("节点ID必须在0和%d之间", nodeMax)
@@ -60,7 +60,7 @@ func GenID(nid int64) (int64, error) {
 	timestamp := currentTime - epoch
 
 	// 组合成最终的ID
-	id := (timestamp << timestampShift) | (nodeID << nodeShift) | sequence
+	id := (uint64(timestamp) << timestampShift) | (uint64(nodeID) << nodeShift) | uint64(sequence)
 
 	return id, nil
 }

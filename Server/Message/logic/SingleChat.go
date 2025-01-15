@@ -11,17 +11,62 @@ import (
 	"strconv"
 )
 
-// SingleChatHandler 单聊消息处理
-func SingleChatHandler(con *Connection, p *protocol.Packet) {
+// SingleChatReqHandler 单聊消息处理
+func SingleChatReqHandler(con *Connection, p *protocol.Packet) {
 	switch p.MsgType {
 	case MsgTypeRequest:
 		requestSC(con, p)
-	case MsgTypeResponse:
-		responseSC(con, p)
 	case MsgTypeACK:
 		ackSC(con, p)
 	default:
+		con.SendError(p.Seq, p.Cmd)
 		log.L().Error("Invalid Message Type", log.Any("msg", p))
+	}
+}
+
+// SingleChatDelHandler 单聊消息删除
+func SingleChatDelHandler(con *Connection, p *protocol.Packet) {
+	if p.MsgType != MsgTypeRequest {
+		log.L().Error("Invalid Message Type", log.Any("msg", p))
+		con.SendError(p.Seq, p.Cmd)
+		return
+	}
+	m, err := protocol.DecodeMsg(p.Data)
+	if err != nil {
+		log.L().Error("Decode MsgDel_S", log.Error(err), log.Any("msg", p))
+		con.SendError(p.Seq, p.Cmd)
+		return
+	}
+	// 删除消息
+	err = mysql.DelMsg(m.MsgId)
+	if err != nil {
+		log.L().Error("Delete Message", log.Error(err), log.Any("msg", p))
+		con.SendError(p.Seq, p.Cmd)
+		return
+	}
+	// 通知对方
+	user, ok := connectionsMap.Load(m.ReceiverId)
+	if ok {
+		conn, ok := user.(*Connection)
+		if !ok {
+			log.L().Error("Get Invalid Type In ConnectionMap", log.Uint64("user_id", m.ReceiverId), log.String("type", reflect.TypeOf(user).String()))
+			return
+		}
+		seq, err := utils.GenID(settings.Conf.MachineID)
+		if err != nil {
+			log.L().Error("Gen Seq", log.Error(err))
+			return
+		}
+		conn.Send(seq, CmdMsgDelS, MsgTypeNotify, p.Data)
+	} else {
+		online, err := redis.IsUserOnline(strconv.FormatUint(m.ReceiverId, 10))
+		if err != nil {
+			log.L().Error("Redis Check User Online", log.Error(err))
+			return
+		}
+		if online {
+			// TODO:转发给对方所在的服务器
+		}
 	}
 }
 
@@ -49,7 +94,7 @@ func SingleChatNotify(m *protocol.Msg) {
 			return
 		}
 		// 发送
-		connection.SendWithACK(uint64(seq), CmdSC, MsgTypeNotify, data, nil)
+		connection.SendWithACK(seq, CmdSC, MsgTypeNotify, data, nil)
 	} else {
 		online, err := redis.IsUserOnline(strconv.FormatUint(m.ReceiverId, 10))
 		if err != nil {
@@ -89,7 +134,7 @@ func requestSC(con *Connection, p *protocol.Packet) {
 		con.SendError(p.Seq, p.Cmd)
 		return
 	}
-	m.MsgId = uint64(msgID)
+	m.MsgId = msgID
 	// 数据库存储
 	if err = mysql.SaveMessage(m); err != nil {
 		log.L().Error("Save Message", log.Error(err), log.Any("msg", p))
@@ -103,19 +148,14 @@ func requestSC(con *Connection, p *protocol.Packet) {
 		con.SendError(p.Seq, p.Cmd)
 		return
 	}
-	con.Send(p.Seq, p.Cmd, MsgTypeACK, data)
+	con.Send(p.Seq, CmdSC, MsgTypeACK, data)
 	// 发送新消息通知
 	SingleChatNotify(m)
 }
 
-// 收到响应的处理
-func responseSC(con *Connection, p *protocol.Packet) {
-
-}
-
 // 收到ACK的处理
 func ackSC(con *Connection, p *protocol.Packet) {
-	defer handlACK(p.Seq)
+	defer handleACK(p.Seq)
 	msg, err := protocol.DecodeMsg(p.Data)
 	if err != nil {
 		log.L().Error("Decode Msg", log.Error(err), log.Any("msg", p))

@@ -199,17 +199,19 @@ func dispatchMessage(data []byte, con *Connection) {
 
 	switch p.Cmd {
 	case CmdACK:
-		handlACK(p.Seq)
+		handleACK(p.Seq)
 	case CmdSC:
-		SingleChatHandler(con, p)
+		SingleChatReqHandler(con, p)
 	case CmdGC:
+	case CmdMsgDelS:
+		SingleChatDelHandler(con, p)
 	default:
 		con.SendError(p.Seq, p.Cmd)
 		log.L().Error("Unknown Cmd", log.Int("cmd", int(p.Cmd)), log.String("user_id", con.Uid))
 	}
 }
 
-func handlACK(seq uint64) {
+func handleACK(seq uint64) {
 	i, exists := ackQueueMap.Load(seq)
 	if !exists {
 		return
