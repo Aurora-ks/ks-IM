@@ -134,3 +134,34 @@ func GetUser(id int) (user *model.User, err error) {
 	err = db.QueryRow(SQL, id).Scan(&user.Id, &user.Name, &user.Gender, &user.Email, &user.Phone, &user.Icon)
 	return
 }
+
+func GetFriendLists(id int) (friendList []*model.Relationship, err error) {
+	stm := "SELECT id, user_id, friend_id, status, remark, group_id FROM friend_relationships WHERE user_id = ? AND status = 1"
+	rows, err := db.Query(stm, id)
+	if err != nil {
+		return
+	}
+	defer rows.Close()
+	for rows.Next() {
+		rel := new(model.Relationship)
+		if err = rows.Scan(&rel.Id, &rel.UserID, &rel.FriendID, &rel.Status, &rel.Remark, &rel.GroupID); err != nil {
+			return
+		}
+		friendList = append(friendList, rel)
+	}
+	return
+}
+func AddFriend(userId, friendId int, remark string) (id int64, err error) {
+	stm := "INSERT INTO friend_relationships(user_id, friend_id, remark) VALUES (?, ?, ?)"
+	res, err := db.Exec(stm, userId, friendId, remark)
+	if err != nil {
+		return
+	}
+	id, err = res.LastInsertId()
+	return
+}
+func RespNewFriend(id int, option int) (err error) {
+	stm := "UPDATE friend_relationships SET status = ? WHERE id = ?"
+	_, err = db.Exec(stm, option, id)
+	return
+}

@@ -21,8 +21,9 @@ func SetUp() *gin.Engine {
 		context.String(200, "OK")
 		return
 	})
+	apiGroup := r.Group("/api/v1")
 
-	UserGroup := r.Group("/api/v1/user")
+	UserGroup := apiGroup.Group("/user")
 	UserGroup.GET("", logic.GetUserInfo)
 	UserGroup.POST("", logic.Register)
 	UserGroup.GET("/verify_code", logic.SendVerifyCode)
@@ -30,5 +31,10 @@ func SetUp() *gin.Engine {
 	UserGroup.POST("/modify", logic.ModifyUserInfo)
 	UserGroup.GET("/icon", logic.GetIcon)
 	UserGroup.POST("/icon", logic.UpdateIcon)
+
+	RelGroup := apiGroup.Group("/rel")
+	RelGroup.GET("friend-list", logic.GetFriendships)
+	RelGroup.POST("/add-friend", logic.AddFriend)
+	RelGroup.POST("resp-new-friend", logic.RespNewFriend)
 	return r
 }

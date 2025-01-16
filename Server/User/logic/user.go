@@ -25,13 +25,7 @@ import (
 
 // Register 注册
 func Register(c *gin.Context) {
-	var req struct {
-		Name         string `json:"name"`
-		Gender       int    `json:"gender"`
-		Password     string `json:"password"`
-		Email        string `json:"email"`
-		Verification string `json:"verification"`
-	}
+	var req model.RegisterReq
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, Res(ec.BodyParseJson, "Register Parse Json Error"))
 		log.L().Warn("Register Body Parse Json")
@@ -86,17 +80,14 @@ func SendVerifyCode(c *gin.Context) {
 // Login 登录
 func Login(c *gin.Context) {
 	// 获取参数
-	var req struct {
-		id       int
-		password string
-	}
+	var req model.LoginReq
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, Res(ec.BodyParseJson, "Login Parse Json Error"))
 		log.L().Warn("Login Body Parse Json")
 		return
 	}
 	// 查询数据库
-	user, err := mysql.UserLogin(req.id, req.password)
+	user, err := mysql.UserLogin(req.Id, req.Password)
 	if errors.Is(err, sql.ErrNoRows) {
 		c.JSON(http.StatusOK, Res(ec.LoginFailed, "Login Failed"))
 		return
@@ -132,9 +123,7 @@ func ModifyUserInfo(c *gin.Context) {
 
 // GetIcon 获取头像
 func GetIcon(c *gin.Context) {
-	var req struct {
-		Id []int `json:"id"`
-	}
+	var req model.GetIconReq
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, Res(ec.BodyParseJson, "Get Icon Parse Json"))
 		log.L().Error("Get Icon Parse Json", log.Error(err))
@@ -186,29 +175,26 @@ func GetIcon(c *gin.Context) {
 // UpdateIcon 更新头像
 func UpdateIcon(c *gin.Context) {
 	// TODO:加入hash校验，避免重复写入
-	var req struct {
-		Id          int `json:"id"`
-		model.Image `json:"image"`
-	}
+	var req model.UpdateIconReq
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusOK, Res(ec.BodyParseJson, "Update Icon Parse Json"))
 		log.L().Error("Update Icon Parse Json", log.Error(err))
 		return
 	}
 	// 写入数据库
-	if err := mysql.UpdateIcon(req.Id, &req.Image); err != nil {
+	if err := mysql.UpdateIcon(req.Id, &req.Img); err != nil {
 		c.JSON(http.StatusOK, Res(ec.DBUpdate, "Update Icon"))
 		log.L().Error("Update Icon", log.Error(err))
 		return
 	}
 	// 写入文件
-	data, err := base64.StdEncoding.DecodeString(req.Image.Data)
+	data, err := base64.StdEncoding.DecodeString(req.Img.Data)
 	if err != nil {
 		c.JSON(http.StatusOK, Res(ec.SaveFile, "Icon Base64 Parse Failed"))
 		log.L().Error("Icon Base64 Parse", log.Error(err))
 		return
 	}
-	filePath := fmt.Sprintf("%s/icon/%d%s", settings.Conf.ServerConfig.FilePath, req.Id, req.Image.MimeType)
+	filePath := fmt.Sprintf("%s/icon/%d%s", settings.Conf.ServerConfig.FilePath, req.Id, req.Img.MimeType)
 	if err = os.WriteFile(filePath, data, 0644); err != nil {
 		c.JSON(http.StatusOK, Res(ec.SaveFile, "Save Icon"))
 		log.L().Error("Save Icon", log.Error(err))
