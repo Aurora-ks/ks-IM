@@ -21,6 +21,7 @@ type Relationship struct {
 	Status   int    `json:"status"`
 	Remark   string `json:"remark"`
 	GroupID  int    `json:"group_id"`
+	Alias    string `json:"alias"`
 }
 
 type RegisterReq struct {
@@ -52,4 +53,24 @@ type AddFriendResp struct {
 type RespNewFriendRes struct {
 	Id     int `json:"id"`
 	Option int `json:"option"`
+}
+type AddRelGroupReq struct {
+	UserID int    `json:"user_id"`
+	Name   string `json:"name"`
+}
+type AddRelGroupResp struct {
+	Id int `json:"id"`
+}
+type ModifyRelGroupReq struct {
+	UserID  int    `json:"user_id"`
+	Name    string `json:"name"`
+	GroupID int    `json:"group_id"`
+}
+type ModifyFriendGroupReq struct {
+	ID      int `json:"id"`
+	GroupID int `json:"group_id"`
+}
+type ModifyFriendAliasReq struct {
+	ID    int    `json:"id"`
+	Alias string `json:"alias"`
 }

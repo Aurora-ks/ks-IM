@@ -35,6 +35,7 @@ func Close() {
 	_ = db.Close()
 }
 
+// UserRegister 用户注册
 func UserRegister(name, password, email string, gender int) (err error) {
 	tx, err := db.Begin()
 	if err != nil {
@@ -80,6 +81,7 @@ func UserRegister(name, password, email string, gender int) (err error) {
 	return
 }
 
+// UserLogin 用户登录
 func UserLogin(id int, password string) (user *model.User, err error) {
 	user = new(model.User)
 	loginSQL := "SELECT id, name, gender, email, phone FROM user WHERE id = ? and password = SHA2(CONCAT(?, salt), 256)"
@@ -87,6 +89,7 @@ func UserLogin(id int, password string) (user *model.User, err error) {
 	return
 }
 
+// UserModify 修改用户信息
 func UserModify(user *model.User) (err error) {
 	updateSQL := "UPDATE user SET name = ?, gender = ?, email = ?, phone = ? WHERE id = ?"
 	_, err = db.Exec(updateSQL, user.Name, user.Gender, user.Email, user.Phone, user.Id)
@@ -96,6 +99,7 @@ func UserModify(user *model.User) (err error) {
 	return
 }
 
+// UpdateIcon 更新头像
 func UpdateIcon(id int, image *model.Image) (err error) {
 	SQL := "UPDATE user SET icon = ? WHERE id = ?"
 	_, err = db.Exec(SQL, fmt.Sprintf("fs://%d%s", id, image.MimeType), id)
@@ -105,6 +109,7 @@ func UpdateIcon(id int, image *model.Image) (err error) {
 	return
 }
 
+// GetIcon 获取头像
 func GetIcon(id []int) (filePath []string, err error) {
 	idString := make([]string, len(id))
 	for i, num := range id {
@@ -128,6 +133,7 @@ func GetIcon(id []int) (filePath []string, err error) {
 	return
 }
 
+// GetUser 获取用户信息
 func GetUser(id int) (user *model.User, err error) {
 	user = new(model.User)
 	SQL := "SELECT id, name, gender, email, phone, icon FROM user WHERE id = ?"
@@ -135,22 +141,26 @@ func GetUser(id int) (user *model.User, err error) {
 	return
 }
 
-func GetFriendLists(id int) (friendList []*model.Relationship, err error) {
-	stm := "SELECT id, user_id, friend_id, status, remark, group_id FROM friend_relationships WHERE user_id = ? AND status = 1"
-	rows, err := db.Query(stm, id)
+// GetFriendship 获取好友关系
+// status = 0 待处理, 1 已通过, 2 已拒绝, 3 已拉黑
+func GetFriendship(id, status int) (friendList []*model.Relationship, err error) {
+	stm := "SELECT id, user_id, friend_id, status, remark, group_id, alias FROM friend_relationships WHERE user_id = ? AND status = ?"
+	rows, err := db.Query(stm, id, status)
 	if err != nil {
 		return
 	}
 	defer rows.Close()
 	for rows.Next() {
 		rel := new(model.Relationship)
-		if err = rows.Scan(&rel.Id, &rel.UserID, &rel.FriendID, &rel.Status, &rel.Remark, &rel.GroupID); err != nil {
+		if err = rows.Scan(&rel.Id, &rel.UserID, &rel.FriendID, &rel.Status, &rel.Remark, &rel.GroupID, &rel.Alias); err != nil {
 			return
 		}
 		friendList = append(friendList, rel)
 	}
 	return
 }
+
+// AddFriend 添加好友申请
 func AddFriend(userId, friendId int, remark string) (id int64, err error) {
 	stm := "INSERT INTO friend_relationships(user_id, friend_id, remark) VALUES (?, ?, ?)"
 	res, err := db.Exec(stm, userId, friendId, remark)
@@ -160,8 +170,42 @@ func AddFriend(userId, friendId int, remark string) (id int64, err error) {
 	id, err = res.LastInsertId()
 	return
 }
+
+// RespNewFriend 响应好友申请
 func RespNewFriend(id int, option int) (err error) {
 	stm := "UPDATE friend_relationships SET status = ? WHERE id = ?"
 	_, err = db.Exec(stm, option, id)
+	return
+}
+
+// AddRelGroup 添加关系分组
+func AddRelGroup(userId int, name string) (id int64, err error) {
+	stm := "INSERT INTO friend_groups(user_id, group_name) VALUES (?, ?)"
+	res, err := db.Exec(stm, userId, name)
+	if err != nil {
+		return
+	}
+	id, err = res.LastInsertId()
+	return
+}
+
+// ModifyRelGroup 修改关系分组名称
+func ModifyRelGroup(gId int, name string) (err error) {
+	stm := "UPDATE friend_groups SET group_name = ? WHERE id = ?"
+	_, err = db.Exec(stm, name, gId)
+	return
+}
+
+// ModifyFriendGroup 修改好友所属分组
+func ModifyFriendGroup(id, groupId int) (err error) {
+	stm := "UPDATE friend_relationships SET group_id = ? WHERE id = ?"
+	_, err = db.Exec(stm, groupId, id)
+	return
+}
+
+// ModifyFriendAlias 修改好友备注
+func ModifyFriendAlias(id int, alias string) (err error) {
+	stm := "UPDATE friend_relationships SET alias = ? WHERE id = ?"
+	_, err = db.Exec(stm, alias, id)
 	return
 }
