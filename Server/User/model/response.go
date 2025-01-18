@@ -12,3 +12,9 @@ type RespNewFriendRes struct {
 type AddRelGroupResp struct {
 	Id int `json:"id"`
 }
+
+// group
+
+type NewGroupResp struct {
+	Id int `json:"id"`
+}

@@ -64,6 +64,7 @@ func AddFriend(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, OK(data))
+	// TODO:推送消息
 }
 
 // RespNewFriend 响应好友申请

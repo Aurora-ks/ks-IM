@@ -15,7 +15,7 @@ import (
 var db *sql.DB
 
 func Init() (err error) {
-	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s",
+	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?parseTime=true&&loc=Local",
 		settings.Conf.MysqlConfig.User,
 		settings.Conf.MysqlConfig.Password,
 		settings.Conf.MysqlConfig.Host,
@@ -207,5 +207,50 @@ func ModifyFriendGroup(id, groupId int) (err error) {
 func ModifyFriendAlias(id int, alias string) (err error) {
 	stm := "UPDATE friend_relationships SET alias = ? WHERE id = ?"
 	_, err = db.Exec(stm, alias, id)
+	return
+}
+
+// NewGroup 创建群组
+func NewGroup(uid int, name, description string, isPublic int) (gId int64, err error) {
+	stm := "INSERT INTO groups(creator_id, name, description, public) VALUES (?, ?, ?, ?)"
+	res, err := db.Exec(stm, uid, name, description, isPublic)
+	if err != nil {
+		return
+	}
+	gId, err = res.LastInsertId()
+	return
+}
+
+// GetGroupInfo 获取群组信息
+func GetGroupInfo(gid int) (grp *model.Group, err error) {
+	grp = new(model.Group)
+	stm := "SELECT id, creator_id, name, description, members_num,`public` FROM groups WHERE id = ?"
+	err = db.QueryRow(stm, gid).Scan(&grp.Id, &grp.CreatorID, &grp.Name, &grp.Description, &grp.MemberCount, &grp.IsPublic)
+	return
+}
+
+// GetGroupList 获取用户群组列表
+func GetGroupList(uid int) (grpList []*model.GroupMember, err error) {
+	stm := "SELECT id, group_id, role, join_at FROM group_members WHERE user_id = ?"
+	rows, err := db.Query(stm, uid)
+	if err != nil {
+		return
+	}
+	defer rows.Close()
+	for rows.Next() {
+		grp := new(model.GroupMember)
+		if err = rows.Scan(&grp.Id, &grp.GroupId, &grp.Role, &grp.JoinAt); err != nil {
+			return
+		}
+		grp.UserId = uid
+		grpList = append(grpList, grp)
+	}
+	return
+}
+
+// DelGroup 删除群组
+func DelGroup(gid int) (err error) {
+	stm := "UPDATE groups SET deleted = 1 WHERE id = ?"
+	_, err = db.Exec(stm, gid)
 	return
 }

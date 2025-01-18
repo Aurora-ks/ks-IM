@@ -35,6 +35,14 @@ func L() *slog.Logger {
 func Error(err error) slog.Attr {
 	return slog.Any("error", err)
 }
+func String(k, v string) slog.Attr          { return slog.String(k, v) }
+func Int(k string, v int) slog.Attr         { return slog.Int(k, v) }
+func Int64(k string, v int64) slog.Attr     { return slog.Int64(k, v) }
+func Uint64(k string, v uint64) slog.Attr   { return slog.Uint64(k, v) }
+func Float64(k string, v float64) slog.Attr { return slog.Float64(k, v) }
+func Bool(k string, v bool) slog.Attr       { return slog.Bool(k, v) }
+func Any(k string, v any) slog.Attr         { return slog.Any(k, v) }
+func Time(k string, v time.Time) slog.Attr  { return slog.Time(k, v) }
 
 func GinLogger() gin.HandlerFunc {
 	return func(c *gin.Context) {

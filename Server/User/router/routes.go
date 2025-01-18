@@ -41,5 +41,10 @@ func SetUp() *gin.Engine {
 	RelGroup.POST("/modify-group", logic.ModifyRelGroup)
 	RelGroup.POST("/modify-friend-group", logic.ModifyFriendGroup)
 	RelGroup.POST("/modify-friend-alias", logic.ModifyFriendAlias)
+
+	GrpGroup := apiGroup.Group("/grp")
+	GrpGroup.GET("/info", logic.GetGroupInfo)
+	GrpGroup.GET("/lists", logic.GetGroupList)
+	GrpGroup.POST("/del", logic.DelGroup)
 	return r
 }

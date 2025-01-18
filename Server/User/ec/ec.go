@@ -5,6 +5,7 @@ const (
 	// 1XXX 业务类
 	VerificationNotEqual = 1000
 	LoginFailed          = 1001
+	PermissionDenied     = 1002
 	// 2XXX 请求类
 	BodyParseJson  = 2000
 	ParmsInvalid   = 2001

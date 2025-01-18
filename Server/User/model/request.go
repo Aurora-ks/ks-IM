@@ -45,3 +45,10 @@ type ModifyFriendAliasReq struct {
 	ID    int    `json:"id"`
 	Alias string `json:"alias"`
 }
+
+// groups
+
+type DelGroupReq struct {
+	Id     int `json:"id"`
+	UserID int `json:"user_id"`
+}

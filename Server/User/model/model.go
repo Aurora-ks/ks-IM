@@ -1,5 +1,7 @@
 package model
 
+import "time"
+
 type User struct {
 	Id     int    `json:"id"`
 	Name   string `json:"name"`
@@ -22,4 +24,19 @@ type Relationship struct {
 	Remark   string `json:"remark"`
 	GroupID  int    `json:"group_id"`
 	Alias    string `json:"alias"`
+}
+type Group struct {
+	Id          int    `json:"id"`
+	Name        string `json:"name"`
+	CreatorID   int    `json:"creator_id"`
+	MemberCount int    `json:"member_count"`
+	Description string `json:"description"`
+	IsPublic    int    `json:"public"`
+}
+type GroupMember struct {
+	Id      int       `json:"id"`
+	GroupId int       `json:"group_id"`
+	UserId  int       `json:"user_id"`
+	Role    int       `json:"role"`
+	JoinAt  time.Time `json:"join_at"`
 }
