@@ -5,12 +5,16 @@ import (
 	"User/ec"
 	"User/log"
 	"User/model"
+	"database/sql"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
+
+const GrpJoinMethInvite = 1
 
 // NewGroup 创建群组
 func NewGroup(c *gin.Context) {
@@ -59,7 +63,7 @@ func GetGroupInfo(c *gin.Context) {
 	c.JSON(http.StatusOK, OK(data))
 }
 
-// GetGroupList 获取用户群组列表
+// GetGroupList 获取用户加入的群组列表
 func GetGroupList(c *gin.Context) {
 	id := c.Param("user_id")
 	uid, err := strconv.Atoi(id)
@@ -68,8 +72,8 @@ func GetGroupList(c *gin.Context) {
 		log.L().Warn("User Id Parse Failed", log.Error(err))
 		return
 	}
-	groups, err := mysql.GetGroupList(uid)
-	if err != nil {
+	groups, err := mysql.GetGroupList(uid, mysql.GrpRoleAll)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		c.JSON(http.StatusOK, Res(ec.DBQuery, "DB Get Group List"))
 		log.L().Error("DB Get Group List", log.Error(err))
 		return
@@ -110,4 +114,220 @@ func DelGroup(c *gin.Context) {
 	c.JSON(http.StatusOK, OK())
 }
 
-// 加入群组
+// ApplyJoinGroup 申请加入群组
+func ApplyJoinGroup(c *gin.Context) {
+	var req model.ApplyJoinGroupReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusOK, Res(ec.BodyParseJson, "ApplyJoinGroup Parse Json Error"))
+		log.L().Warn("ApplyJoinGroup Body Parse Json")
+		return
+	}
+	// 查询群加入方式
+	grpSetting, err := mysql.GetGroupSetting(req.GroupID)
+	if err != nil {
+		c.JSON(http.StatusOK, Res(ec.DBQuery, "DB Get Group Setting"))
+		log.L().Error("DB Get Group Setting", log.Error(err))
+		return
+	} else if grpSetting.JoinMethod == mysql.GrpJoinMethInvite && req.JoinMethod != GrpJoinMethInvite {
+		c.JSON(http.StatusOK, Res(ec.PermissionDenied, "Permission Denied"))
+		log.L().Warn("Apply Join Group Permission Denied", log.Any("request", req))
+	}
+	// 可直接加入
+	if grpSetting.JoinMethod == mysql.GrpJoinMethAll {
+		err = addGroupNewMember([]int{req.UserID}, req.GroupID)
+		if err != nil {
+			c.JSON(http.StatusOK, Res(ec.DBInsert, "DB Apply Join Group"))
+			log.L().Error("DB Apply Join Group", log.Error(err))
+			return
+		}
+	} else {
+		// 需要审核
+		if err = mysql.ApplyJoinGroup(req.GroupID, req.UserID); err != nil {
+			c.JSON(http.StatusOK, Res(ec.DBInsert, "DB Apply Join Group"))
+			log.L().Error("DB Apply Join Group", log.Error(err))
+			return
+		}
+		// TODO:推送消息
+	}
+}
+
+// GetGroupApplyList 获取群组申请列表
+func GetGroupApplyList(c *gin.Context) {
+	id := c.Param("user_id")
+	uid, err := strconv.Atoi(id)
+	if err != nil {
+		c.JSON(http.StatusOK, Res(ec.ParmsInvalid, "User Id Parse Failed"))
+		log.L().Warn("User Id Parse Failed", log.Error(err))
+		return
+	}
+	var grpList []int
+	// 获取自身的申请列表
+	applyList, err := mysql.GetGroupApplyListWithUser(uid)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		c.JSON(http.StatusOK, Res(ec.DBQuery, "DB Get Group Apply List"))
+		log.L().Error("DB Get Group Apply List", log.Error(err))
+		return
+	}
+	for _, v := range applyList {
+		grpList = append(grpList, v.GroupId)
+	}
+	// 获取用户管理的所有群id
+	l, err := mysql.GetGroupList(uid, mysql.GrpRoleOwner)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		c.JSON(http.StatusOK, Res(ec.DBQuery, "DB Get Group Apply List"))
+		log.L().Error("DB Get Group Apply List", log.Error(err))
+		return
+	}
+	for _, v := range l {
+		grpList = append(grpList, v.GroupId)
+	}
+	l, err = mysql.GetGroupList(uid, mysql.GrpRoleAdmin)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		c.JSON(http.StatusOK, Res(ec.DBQuery, "DB Get Group Apply List"))
+		log.L().Error("DB Get Group Apply List", log.Error(err))
+		return
+	}
+	for _, v := range l {
+		grpList = append(grpList, v.GroupId)
+	}
+	// 查询申请列表
+	applyList, err = mysql.GetGroupApplyListWithGroup(grpList)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		c.JSON(http.StatusOK, Res(ec.DBQuery, "DB Get Group Apply List"))
+		log.L().Error("DB Get Group Apply List", log.Error(err))
+		return
+	}
+
+	data, err := json.Marshal(applyList)
+	if err != nil {
+		c.JSON(http.StatusOK, Res(ec.JsonMarshal, "Group Apply List Marshal Failed"))
+		log.L().Error("Group Apply List Marshal Failed", log.Error(err))
+		return
+	}
+	c.JSON(http.StatusOK, OK(data))
+}
+
+// GroupJoinApplyDeal 群组申请处理
+func GroupJoinApplyDeal(c *gin.Context) {
+	var req model.GroupJoinApplyDealReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusOK, Res(ec.BodyParseJson, "GroupJoinApplyHandle Parse Json Error"))
+		log.L().Warn("GroupJoinApplyHandle Body Parse Json")
+		return
+	}
+	// 权限校验
+	info, err := mysql.GetGroupMemberInfo(req.UserID, req.GroupID)
+	if err != nil || info.Role != mysql.GrpRoleOwner && info.Role != mysql.GrpRoleAdmin {
+		c.JSON(http.StatusOK, Res(ec.PermissionDenied, "Permission Denied"))
+		log.L().Warn("GroupJoinApplyHandle Permission Denied", log.Any("request", req))
+		return
+	}
+	// 处理申请
+	if err = mysql.GroupJoinApplyDeal(req.ApplyID, req.UserID, req.GroupID, req.Status); err != nil {
+		c.JSON(http.StatusOK, Res(ec.DBModify, "DB Group Join Apply Deal"))
+		log.L().Error("DB Group Join Apply Deal", log.Error(err))
+		return
+	}
+	c.JSON(http.StatusOK, OK())
+	// TODO:推送消息
+}
+
+// GetGroupMemberList 获取群组成员列表
+func GetGroupMemberList(c *gin.Context) {
+	id := c.Param("group_id")
+	gid, err := strconv.Atoi(id)
+	if err != nil {
+		c.JSON(http.StatusOK, Res(ec.ParmsInvalid, "Group Id Parse Failed"))
+		log.L().Warn("Group Id Parse Failed", log.Error(err))
+		return
+	}
+	list, err := mysql.GetGroupMemberList(gid)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		c.JSON(http.StatusOK, Res(ec.DBQuery, "DB Get Group Member List"))
+		log.L().Error("DB Get Group Member List", log.Error(err))
+		return
+	}
+	data, err := json.Marshal(list)
+	if err != nil {
+		c.JSON(http.StatusOK, Res(ec.JsonMarshal, "Group Member List Marshal Failed"))
+		log.L().Error("Group Member List Marshal Failed", log.Error(err))
+		return
+	}
+	c.JSON(http.StatusOK, OK(data))
+}
+
+// QuitGroup 退出群组
+func QuitGroup(c *gin.Context) {
+	var req model.QuitGroupReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusOK, Res(ec.BodyParseJson, "QuitGroup Parse Json Error"))
+		log.L().Warn("QuitGroup Body Parse Json")
+		return
+	}
+	// 查询用户是否在群中
+	info, err := mysql.GetGroupMemberInfo(req.UserID, req.GroupID)
+	if err != nil {
+		c.JSON(http.StatusOK, Res(ec.DBQuery, "DB Get Group Member Info"))
+		log.L().Error("DB Get Group Member Info", log.Error(err))
+		return
+	}
+	if info.Role == mysql.GrpRoleOwner {
+		c.JSON(http.StatusOK, Res(ec.PermissionDenied, "Permission Denied"))
+		log.L().Warn("Quit Group Permission Denied", log.Any("request", req))
+		return
+	}
+	// 退出群组
+	if err = mysql.QuitGroup(req.UserID, req.GroupID); err != nil {
+		c.JSON(http.StatusOK, Res(ec.DBModify, "DB Quit Group"))
+		log.L().Error("DB Quit Group", log.Error(err))
+		return
+	}
+	c.JSON(http.StatusOK, OK())
+	// TODO:推送消息
+}
+
+// ModifyGroupMemberRole 修改群成员权限
+func ModifyGroupMemberRole(c *gin.Context) {
+	var req model.ModifyGroupMemberRoleReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusOK, Res(ec.BodyParseJson, "Modify Group Member Role Parse Json Error"))
+		log.L().Warn("Modify Group Member Role Body Parse Json")
+		return
+	}
+	if req.UserID == req.EditorID {
+		c.JSON(http.StatusOK, Res(ec.PermissionDenied, "Permission Denied"))
+		log.L().Warn("Modify Group Member Role Permission Denied", log.Any("request", req))
+		return
+	}
+	// 查询用户是否在群中
+	memInfo, err := mysql.GetGroupMemberInfo(req.UserID, req.GroupID)
+	if err != nil {
+		c.JSON(http.StatusOK, Res(ec.DBQuery, "DB Get Group Member Info"))
+		log.L().Error("DB Get Group Member Info", log.Error(err))
+		return
+	}
+	// 权限验证
+	if memInfo.Role == mysql.GrpRoleNormal {
+		c.JSON(http.StatusOK, Res(ec.PermissionDenied, "Permission Denied"))
+		log.L().Warn("Modify Group Member Role Permission Denied", log.Any("request", req))
+		return
+	}
+	err = mysql.ModifyGroupMemberRole(req.UserID, req.GroupID, req.Role)
+	if err != nil {
+		c.JSON(http.StatusOK, Res(ec.DBModify, "DB Modify Group Member Role"))
+		log.L().Error("DB Modify Group Member Role", log.Error(err))
+		return
+	}
+	c.JSON(http.StatusOK, OK())
+	// TODO:推送消息
+}
+
+// 成员直接入群
+func addGroupNewMember(userID []int, groupID int) (err error) {
+	err = mysql.AddGroupMember(userID, groupID)
+	if err != nil {
+		return
+	}
+	// TODO:推送消息
+	return
+}

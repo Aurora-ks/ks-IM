@@ -40,3 +40,13 @@ type GroupMember struct {
 	Role    int       `json:"role"`
 	JoinAt  time.Time `json:"join_at"`
 }
+type GroupApply struct {
+	Id      int `json:"id"`
+	GroupId int `json:"group_id"`
+	UserId  int `json:"user_id"`
+	Status  int `json:"status"`
+}
+type GroupSetting struct {
+	GroupId    int `json:"group_id"`
+	JoinMethod int `json:"join_method"`
+}

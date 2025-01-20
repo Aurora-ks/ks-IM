@@ -52,3 +52,25 @@ type DelGroupReq struct {
 	Id     int `json:"id"`
 	UserID int `json:"user_id"`
 }
+type ApplyJoinGroupReq struct {
+	UserID     int `json:"user_id"`
+	GroupID    int `json:"group_id"`
+	JoinMethod int `json:"join_method"`
+}
+type GroupJoinApplyDealReq struct {
+	ApplyID    int `json:"apply_id"`
+	UserID     int `json:"user_id"`
+	ReviewerID int `json:"reviewer_id"`
+	GroupID    int `json:"group_id"`
+	Status     int `json:"status"`
+}
+type QuitGroupReq struct {
+	GroupID int `json:"group_id"`
+	UserID  int `json:"user_id"`
+}
+type ModifyGroupMemberRoleReq struct {
+	EditorID int `json:"editor_id"`
+	UserID   int `json:"user_id"`
+	GroupID  int `json:"group_id"`
+	Role     int `json:"role"`
+}

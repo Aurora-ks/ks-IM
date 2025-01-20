@@ -44,7 +44,14 @@ func SetUp() *gin.Engine {
 
 	GrpGroup := apiGroup.Group("/grp")
 	GrpGroup.GET("/info", logic.GetGroupInfo)
-	GrpGroup.GET("/lists", logic.GetGroupList)
+	GrpGroup.GET("/list", logic.GetGroupList)
 	GrpGroup.POST("/del", logic.DelGroup)
+	GrpGroup.POST("/new", logic.NewGroup)
+	GrpGroup.POST("/apply", logic.ApplyJoinGroup)
+	GrpGroup.GET("/apply-list", logic.GetGroupApplyList)
+	GrpGroup.POST("/apply-deal", logic.GroupJoinApplyDeal)
+	GrpGroup.GET("/members", logic.GetGroupMemberList)
+	GrpGroup.POST("/quit", logic.QuitGroup)
+	GrpGroup.POST("/member-role", logic.ModifyGroupMemberRole)
 	return r
 }

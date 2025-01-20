@@ -5,7 +5,9 @@ import (
 	"User/ec"
 	"User/log"
 	"User/model"
+	"database/sql"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strconv"
 
@@ -29,7 +31,7 @@ func GetFriendships(c *gin.Context) {
 		return
 	}
 	list, err := mysql.GetFriendship(uid, RelStatusPass)
-	if err != nil {
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		log.L().Error("DB Get Friend List", log.Error(err))
 		c.JSON(http.StatusOK, Res(ec.DBQuery, "DB Get Friend List"))
 		return
@@ -92,7 +94,7 @@ func GetFriendReq(c *gin.Context) {
 		log.L().Error("User Id Parse Failed", log.Error(err))
 	}
 	friendList, err := mysql.GetFriendship(uid, RelStatusWait)
-	if err != nil {
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		c.JSON(http.StatusOK, Res(ec.DBQuery, "DB Get Friend List"))
 		log.L().Error("DB Get Friend List", log.Error(err))
 		return
