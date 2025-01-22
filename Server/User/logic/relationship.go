@@ -23,7 +23,7 @@ const (
 
 // GetFriendships 获取用户的好友列表
 func GetFriendships(c *gin.Context) {
-	id := c.Param("uid")
+	id := c.Query("uid")
 	uid, err := strconv.Atoi(id)
 	if err != nil {
 		c.JSON(http.StatusOK, Res(ec.ParmsInvalid, "User Id Parse Failed"))
@@ -87,7 +87,7 @@ func RespNewFriend(c *gin.Context) {
 
 // GetFriendReq 拉取好友申请
 func GetFriendReq(c *gin.Context) {
-	id := c.Param("uid")
+	id := c.Query("uid")
 	uid, err := strconv.Atoi(id)
 	if err != nil {
 		c.JSON(http.StatusOK, Res(ec.ParmsInvalid, "User Id Parse Failed"))

@@ -41,7 +41,7 @@ func NewGroup(c *gin.Context) {
 
 // GetGroupInfo 获取群组信息
 func GetGroupInfo(c *gin.Context) {
-	id := c.Param("group_id")
+	id := c.Query("group_id")
 	gid, err := strconv.Atoi(id)
 	if err != nil {
 		c.JSON(http.StatusOK, Res(ec.ParmsInvalid, "Group Id Parse Failed"))
@@ -65,7 +65,7 @@ func GetGroupInfo(c *gin.Context) {
 
 // GetGroupList 获取用户加入的群组列表
 func GetGroupList(c *gin.Context) {
-	id := c.Param("user_id")
+	id := c.Query("uid")
 	uid, err := strconv.Atoi(id)
 	if err != nil {
 		c.JSON(http.StatusOK, Res(ec.ParmsInvalid, "User Id Parse Failed"))
@@ -153,7 +153,7 @@ func ApplyJoinGroup(c *gin.Context) {
 
 // GetGroupApplyList 获取群组申请列表
 func GetGroupApplyList(c *gin.Context) {
-	id := c.Param("user_id")
+	id := c.Query("uid")
 	uid, err := strconv.Atoi(id)
 	if err != nil {
 		c.JSON(http.StatusOK, Res(ec.ParmsInvalid, "User Id Parse Failed"))
@@ -234,7 +234,7 @@ func GroupJoinApplyDeal(c *gin.Context) {
 
 // GetGroupMemberList 获取群组成员列表
 func GetGroupMemberList(c *gin.Context) {
-	id := c.Param("group_id")
+	id := c.Query("group_id")
 	gid, err := strconv.Atoi(id)
 	if err != nil {
 		c.JSON(http.StatusOK, Res(ec.ParmsInvalid, "Group Id Parse Failed"))
