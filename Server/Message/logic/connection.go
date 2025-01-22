@@ -4,9 +4,12 @@ import (
 	"Message/db/redis"
 	"Message/log"
 	"Message/protocol"
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
+	"google.golang.org/protobuf/proto"
 	"net/http"
+	"strconv"
 	"sync"
 	"time"
 )
@@ -20,8 +23,8 @@ var wsUpgrader = websocket.Upgrader{
 		return true
 	},
 }
-var connectionsMap sync.Map // uid[int]-con[*Connection]
-var ackQueueMap sync.Map    // seq[int]-item[*DataItem]
+var connectionsMap sync.Map // uid[uint64]-con[*Connection]
+var ackQueueMap sync.Map    // seq[int64]-item[*DataItem]
 
 const (
 	pingInterval  = 30 * time.Second
@@ -31,7 +34,7 @@ const (
 
 type Connection struct {
 	Conn        *websocket.Conn
-	Uid         string
+	Uid         uint64
 	ReceiveChan chan []byte
 	SendChan    chan []byte
 }
@@ -47,7 +50,7 @@ type DataItem struct {
 func (con *Connection) Send(seq uint64, cmd, msgType uint32, data []byte) {
 	p, err := protocol.Encode(seq, cmd, msgType, data)
 	if err != nil {
-		log.L().Error("Encode Message", log.Error(err), log.String("user_id", con.Uid))
+		log.L().Error("Encode Message", log.Error(err), log.Uint64("user_id", con.Uid))
 		return
 	}
 	con.SendChan <- p
@@ -60,7 +63,7 @@ func (con *Connection) SendRaw(data []byte) {
 func (con *Connection) SendWithACK(seq uint64, cmd, msgType uint32, data []byte, ackHandler func(params ...any)) {
 	p, err := protocol.Encode(seq, cmd, msgType, data)
 	if err != nil {
-		log.L().Error("Encode Message", log.Error(err), log.String("user_id", con.Uid))
+		log.L().Error("Encode Message", log.Error(err), log.Uint64("user_id", con.Uid))
 		return
 	}
 	con.SendChan <- p
@@ -91,7 +94,8 @@ func (con *Connection) SendRetry(seq uint64) {
 	item := i.(*DataItem)
 	// 重传次数过多
 	if item.Retries >= retryCount {
-		log.L().Debug("Retry Count Exceeded", log.String("user_id", con.Uid), log.Uint64("seq", seq))
+		log.L().Debug("Retry Count Exceeded", log.Uint64("seq", seq))
+		con.Conn.Close()
 		ackQueueMap.Delete(seq)
 		return
 	}
@@ -101,10 +105,16 @@ func (con *Connection) SendRetry(seq uint64) {
 	item.Timer.Reset(retryInterval)
 }
 func NewConnection(context *gin.Context) {
-	uid := context.Param("id")
+	id := context.Param("id")
+	uid, err := strconv.ParseUint(id, 10, 64)
+	if err != nil {
+		log.L().Error("Parse UID", log.Error(err), log.String("user_id", id))
+		context.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
 	client, err := wsUpgrader.Upgrade(context.Writer, context.Request, nil)
 	if err != nil {
-		log.L().Error("Websocket Upgrade", log.Error(err), log.String("user_id", uid))
+		log.L().Error("Websocket Upgrade", log.Error(err), log.Uint64("user_id", uid))
 		client.Close()
 		return
 	}
@@ -117,14 +127,14 @@ func NewConnection(context *gin.Context) {
 	}
 	err = addConnection(connection)
 	if err != nil {
-		log.L().Error("Add Connection", log.Error(err), log.String("user_id", uid))
+		log.L().Error("Add Connection", log.Error(err), log.Uint64("user_id", uid))
 		client.Close()
 		return
 	}
 
 	client.SetCloseHandler(func(code int, text string) error {
 		if err = removeConnection(uid); err != nil {
-			log.L().Error("Remove Connection", log.Error(err), log.String("user_id", uid))
+			log.L().Error("Remove Connection", log.Error(err), log.Uint64("user_id", uid))
 		}
 		return nil
 	})
@@ -136,12 +146,12 @@ func addConnection(con *Connection) error {
 	uid := con.Uid
 	conn := con.Conn
 	connectionsMap.Store(uid, conn)
-	return redis.UserOnline(uid)
+	return redis.UserOnline(strconv.FormatUint(uid, 10))
 }
 
-func removeConnection(uid string) error {
+func removeConnection(uid uint64) error {
 	connectionsMap.Delete(uid)
-	return redis.UserOffline(uid)
+	return redis.UserOffline(strconv.FormatUint(uid, 10))
 }
 
 func connHandler(con *Connection) {
@@ -160,7 +170,7 @@ func connHandler(con *Connection) {
 		case data := <-con.SendChan:
 			err := con.Conn.WriteMessage(websocket.TextMessage, data)
 			if err != nil {
-				log.L().Error("Write Message", log.Error(err), log.String("user_id", con.Uid))
+				log.L().Error("Write Message", log.Error(err), log.Uint64("user_id", con.Uid))
 				quit <- true
 				return
 			}
@@ -176,7 +186,7 @@ func readMessage(con *Connection, quit chan bool) {
 		_, p, err := con.Conn.ReadMessage()
 		if err != nil {
 			if !isNormalClose(err) {
-				log.L().Error("Read Message", log.Error(err), log.String("user_id", con.Uid))
+				log.L().Error("Read Message", log.Error(err), log.Uint64("user_id", con.Uid))
 			}
 			quit <- true
 			return
@@ -188,12 +198,13 @@ func readMessage(con *Connection, quit chan bool) {
 func dispatchMessage(data []byte, con *Connection) {
 	p, err := protocol.Decode(data)
 	if err != nil {
-		log.L().Error("Decode Message", log.Error(err), log.String("user_id", con.Uid))
+		log.L().Error("Decode Message", log.Error(err), log.Uint64("user_id", con.Uid))
 		return
 	}
+	log.L().Info("Receive Message", log.Any("msg", p))
 	if int(p.DataLength) != len(p.Data) {
 		con.SendError(p.Seq, p.Cmd)
-		log.L().Error("Data Length Error", log.Int("data_length", int(p.DataLength)), log.String("user_id", con.Uid))
+		log.L().Error("Data Length Error", log.Any("msg", p))
 		return
 	}
 
@@ -201,13 +212,14 @@ func dispatchMessage(data []byte, con *Connection) {
 	case CmdACK:
 		handleACK(p.Seq)
 	case CmdSC:
-		SingleChatReqHandler(con, p)
+		SingleChatHandler(con, p)
 	case CmdGC:
+		GroupChatHandler(con, p)
 	case CmdMsgDelS:
 		SingleChatDelHandler(con, p)
 	default:
 		con.SendError(p.Seq, p.Cmd)
-		log.L().Error("Unknown Cmd", log.Int("cmd", int(p.Cmd)), log.String("user_id", con.Uid))
+		log.L().Error("Unknown Cmd", log.Any("msg", p))
 	}
 }
 
@@ -217,6 +229,7 @@ func handleACK(seq uint64) {
 		return
 	}
 	item := i.(*DataItem)
+	item.Timer.Stop()
 	if item.ACKHandle != nil {
 		item.ACKHandle()
 	}
@@ -240,17 +253,17 @@ func heartbeat(con *Connection, quit chan bool) {
 		// 心跳发送
 		case <-ticker.C:
 			if retries > retryCount {
-				log.L().Debug("Heartbeat timeout after retries", log.String("user_id", con.Uid))
+				log.L().Debug("Heartbeat timeout after retries", log.Uint64("user_id", con.Uid))
 				quit <- true
 				return
 			}
 			if err := con.Conn.WriteMessage(websocket.PingMessage, []byte{}); err != nil {
-				log.L().Error("Ping Write", log.Error(err), log.String("user_id", con.Uid))
+				log.L().Error("Ping Write", log.Error(err), log.Uint64("user_id", con.Uid))
 				quit <- true
 				return
 			}
 			retries++
-			log.L().Debug("Heartbeat sent", log.String("user_id", con.Uid), log.Int("retries", retries))
+			log.L().Debug("Heartbeat sent", log.Uint64("user_id", con.Uid), log.Int("retries", retries))
 		case <-quit:
 			return
 		}
@@ -263,4 +276,30 @@ func isNormalClose(err error) bool {
 		return true
 	}
 	return false
+}
+
+// 根据序列号获取消息包
+func getPacket(seq uint64) (p *protocol.Packet, err error) {
+	v, ok := ackQueueMap.Load(seq)
+	if !ok {
+		err = fmt.Errorf("message not found")
+		return
+	}
+	item := v.(*DataItem)
+	err = proto.Unmarshal(item.Data, p)
+	return
+}
+
+// isUserInLocal 查询用户是否在本地服务器在线
+func isUserInLocal(uid uint64) (isOnline bool, con *Connection) {
+	connectionsMap.Range(func(key, value any) bool {
+		if key.(uint64) == uid {
+			isOnline = true
+			con = value.(*Connection)
+			return false
+		}
+		return true
+	})
+	isOnline = false
+	return
 }

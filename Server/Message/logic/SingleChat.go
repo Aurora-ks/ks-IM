@@ -11,8 +11,8 @@ import (
 	"strconv"
 )
 
-// SingleChatReqHandler 单聊消息处理
-func SingleChatReqHandler(con *Connection, p *protocol.Packet) {
+// SingleChatHandler 单聊消息处理
+func SingleChatHandler(con *Connection, p *protocol.Packet) {
 	switch p.MsgType {
 	case MsgTypeRequest:
 		requestSC(con, p)
@@ -73,14 +73,9 @@ func SingleChatDelHandler(con *Connection, p *protocol.Packet) {
 // SingleChatNotify 单聊消息通知
 func SingleChatNotify(m *protocol.Msg) {
 	// 查询是否在线
-	user, ok := connectionsMap.Load(m.ReceiverId)
-	if ok {
+	online, con := isUserInLocal(m.ReceiverId)
+	if online {
 		// 在同一服务器中，直接转发
-		connection, ok := user.(*Connection)
-		if !ok {
-			log.L().Error("Get Invalid Type In ConnectionMap", log.Uint64("user_id", m.ReceiverId), log.String("type", reflect.TypeOf(user).String()))
-			return
-		}
 		// 生成序列号
 		seq, err := utils.GenID(settings.Conf.MachineID)
 		if err != nil {
@@ -94,7 +89,7 @@ func SingleChatNotify(m *protocol.Msg) {
 			return
 		}
 		// 发送
-		connection.SendWithACK(seq, CmdSC, MsgTypeNotify, data, nil)
+		con.SendWithACK(seq, CmdSC, MsgTypeNotify, data, nil)
 	} else {
 		online, err := redis.IsUserOnline(strconv.FormatUint(m.ReceiverId, 10))
 		if err != nil {
@@ -136,13 +131,13 @@ func requestSC(con *Connection, p *protocol.Packet) {
 	}
 	m.MsgId = msgID
 	// 数据库存储
-	if err = mysql.SaveMessage(m); err != nil {
+	if err = mysql.SaveMessage(m, false); err != nil {
 		log.L().Error("Save Message", log.Error(err), log.Any("msg", p))
 		con.SendError(p.Seq, p.Cmd)
 		return
 	}
 	// 发送ACK附带消息ID
-	data, err := protocol.EncodeMsgACKRes_S(&protocol.MsgACKResponse_S{MsgId: m.MsgId})
+	data, err := protocol.EncodeMsgACKResp(&protocol.MsgACKResponse{MsgId: m.MsgId})
 	if err != nil {
 		log.L().Error("Encode MsgACKRes_S", log.Error(err), log.Any("msg", p))
 		con.SendError(p.Seq, p.Cmd)
@@ -155,24 +150,40 @@ func requestSC(con *Connection, p *protocol.Packet) {
 
 // 收到ACK的处理
 func ackSC(con *Connection, p *protocol.Packet) {
-	defer handleACK(p.Seq)
-	msg, err := protocol.DecodeMsg(p.Data)
+	// ack解包
+	ack, err := protocol.DecodeMsgACK(p.Data)
 	if err != nil {
 		log.L().Error("Decode Msg", log.Error(err), log.Any("msg", p))
 		con.SendError(p.Seq, p.Cmd)
 		return
 	}
-	if msg.ConversationId == 0 {
+	defer handleACK(ack.Seq)
+	// 获取ack关联的数据包
+	pa, err := getPacket(ack.Seq)
+	if err != nil {
+		log.L().Error("Get Packet", log.Error(err), log.Any("msg", p))
+		con.SendError(p.Seq, p.Cmd)
+		return
+	}
+	// 获取关联的消息包
+	msg, err := protocol.DecodeMsg(pa.Data)
+	if err != nil {
+		log.L().Error("Decode Msg", log.Error(err), log.Any("msg", p))
+		con.SendError(p.Seq, p.Cmd)
+		return
+	}
+	// 处理ACK
+	if ack.ConvId == 0 {
 		// 创建新会话
-		cid, err := mysql.CreateNewConversation(msg.SenderId, msg.ReceiverId, false)
+		cid, err := mysql.CreateNewConversation(msg.ReceiverId, msg.SenderId, false)
 		if err != nil {
 			log.L().Error("Create New Conversation", log.Error(err), log.Any("msg", p))
 			con.SendError(p.Seq, p.Cmd)
 			return
 		}
-		msg.ConversationId = cid
+		ack.ConvId = cid
 	}
-	if err = mysql.UpdateConversation(msg.ConversationId, msg.MsgId); err != nil {
+	if err = mysql.UpdateConversation(ack.ConvId, ack.LastMsgId); err != nil {
 		log.L().Error("Update Conversation", log.Error(err), log.Any("msg", p))
 		con.SendError(p.Seq, p.Cmd)
 		return

@@ -29,6 +29,13 @@ func DecodeMsg(data []byte) (m *Msg, err error) {
 	err = proto.Unmarshal(data, m)
 	return
 }
-func EncodeMsgACKRes_S(m *MsgACKResponse_S) (data []byte, err error) {
+func DecodeMsgACK(data []byte) (m *MsgACK, err error) {
+	err = proto.Unmarshal(data, m)
+	return
+}
+func EncodeMsgACKResp(m *MsgACKResponse) (data []byte, err error) {
+	return proto.Marshal(m)
+}
+func EncodeGroupMsgNotify(m *GroupMsgNotify) (data []byte, err error) {
 	return proto.Marshal(m)
 }

@@ -34,10 +34,14 @@ func Close() {
 }
 
 // SaveMessage 存储新消息
-func SaveMessage(msg *protocol.Msg) (err error) {
-	stm := "INSERT INTO messages(id, sender_id, receiver_id, msg_type, msg_content) VALUES (?, ?, ?, ?, ?)"
+func SaveMessage(msg *protocol.Msg, isGroup bool) (err error) {
+	isGrp := 0
+	if isGroup {
+		isGrp = 1
+	}
+	stm := "INSERT INTO messages(id, sender_id, receiver_id, msg_type, msg_content, is_group) VALUES (?, ?, ?, ?, ?, ?)"
 	// 插入消息
-	_, err = db.Exec(stm, msg.MsgId, msg.SenderId, msg.ReceiverId, msg.ContentType, msg.Content)
+	_, err = db.Exec(stm, msg.MsgId, msg.SenderId, msg.ReceiverId, msg.ContentType, msg.Content, isGrp)
 	return
 }
 func UpdateConversation(cid, mid uint64) (err error) {
@@ -61,12 +65,29 @@ func CreateNewConversation(uid uint64, pid uint64, isGroup bool) (cid uint64, er
 	return
 }
 func GetConversationID(uid, peerID uint64) (cid uint64, err error) {
-	stm := "SELECT id FROM conversations WHERE user_id = ? AND peer_id = ?"
+	stm := "SELECT id FROM conversations WHERE user_id = ? AND peer_id = ? AND deleted = 0"
 	err = db.QueryRow(stm, uid, peerID).Scan(&cid)
 	return
 }
 func DelMsg(mid uint64) (err error) {
 	stm := "DELETE FROM messages WHERE id = ?"
 	_, err = db.Exec(stm, mid)
+	return
+}
+func GetGroupMembersID(gid uint64) (m []uint64, err error) {
+	stm := "SELECT user_id FROM group_members WHERE group_id = ? AND deleted = 0"
+	rows, err := db.Query(stm, gid)
+	if err != nil {
+		return
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var id uint64
+		err = rows.Scan(&id)
+		if err != nil {
+			return
+		}
+		m = append(m, id)
+	}
 	return
 }

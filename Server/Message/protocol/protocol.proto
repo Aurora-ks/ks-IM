@@ -18,11 +18,21 @@ message Msg{
   uint64 conversation_id = 2;
   uint64 sender_id = 3;
   uint64 receiver_id = 4;
-  int32 content_type = 5;
+  uint32 content_type = 5;
   bool is_group = 6;
   bytes content = 7;
 }
-// 服务端收到单聊消息请求的回应
-message MsgACKResponse_S{
+// 客户端发送的ACK包
+message MsgACK{
+  uint64 seq = 1;
+  uint64 conv_id = 2;
+  uint64 last_msg_id = 3;
+}
+// 服务端收到消息请求的回应
+message MsgACKResponse{
   uint64 msg_id = 1;
+}
+// 服务端群聊通知
+message GroupMsgNotify{
+  uint64  group_id = 1;
 }

@@ -112,7 +112,7 @@ type Msg struct {
 	ConversationId uint64                 `protobuf:"varint,2,opt,name=conversation_id,json=conversationId,proto3" json:"conversation_id,omitempty"`
 	SenderId       uint64                 `protobuf:"varint,3,opt,name=sender_id,json=senderId,proto3" json:"sender_id,omitempty"`
 	ReceiverId     uint64                 `protobuf:"varint,4,opt,name=receiver_id,json=receiverId,proto3" json:"receiver_id,omitempty"`
-	ContentType    int32                  `protobuf:"varint,5,opt,name=content_type,json=contentType,proto3" json:"content_type,omitempty"`
+	ContentType    uint32                 `protobuf:"varint,5,opt,name=content_type,json=contentType,proto3" json:"content_type,omitempty"`
 	IsGroup        bool                   `protobuf:"varint,6,opt,name=is_group,json=isGroup,proto3" json:"is_group,omitempty"`
 	Content        []byte                 `protobuf:"bytes,7,opt,name=content,proto3" json:"content,omitempty"`
 	unknownFields  protoimpl.UnknownFields
@@ -177,7 +177,7 @@ func (x *Msg) GetReceiverId() uint64 {
 	return 0
 }
 
-func (x *Msg) GetContentType() int32 {
+func (x *Msg) GetContentType() uint32 {
 	if x != nil {
 		return x.ContentType
 	}
@@ -198,28 +198,30 @@ func (x *Msg) GetContent() []byte {
 	return nil
 }
 
-// 服务端收到单聊消息请求的回应
-type MsgACKResponse_S struct {
+// 客户端发送的ACK包
+type MsgACK struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	MsgId         uint64                 `protobuf:"varint,1,opt,name=msg_id,json=msgId,proto3" json:"msg_id,omitempty"`
+	Seq           uint64                 `protobuf:"varint,1,opt,name=seq,proto3" json:"seq,omitempty"`
+	ConvId        uint64                 `protobuf:"varint,2,opt,name=conv_id,json=convId,proto3" json:"conv_id,omitempty"`
+	LastMsgId     uint64                 `protobuf:"varint,3,opt,name=last_msg_id,json=lastMsgId,proto3" json:"last_msg_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *MsgACKResponse_S) Reset() {
-	*x = MsgACKResponse_S{}
+func (x *MsgACK) Reset() {
+	*x = MsgACK{}
 	mi := &file_protocol_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *MsgACKResponse_S) String() string {
+func (x *MsgACK) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*MsgACKResponse_S) ProtoMessage() {}
+func (*MsgACK) ProtoMessage() {}
 
-func (x *MsgACKResponse_S) ProtoReflect() protoreflect.Message {
+func (x *MsgACK) ProtoReflect() protoreflect.Message {
 	mi := &file_protocol_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -231,41 +233,100 @@ func (x *MsgACKResponse_S) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use MsgACKResponse_S.ProtoReflect.Descriptor instead.
-func (*MsgACKResponse_S) Descriptor() ([]byte, []int) {
+// Deprecated: Use MsgACK.ProtoReflect.Descriptor instead.
+func (*MsgACK) Descriptor() ([]byte, []int) {
 	return file_protocol_proto_rawDescGZIP(), []int{2}
 }
 
-func (x *MsgACKResponse_S) GetMsgId() uint64 {
+func (x *MsgACK) GetSeq() uint64 {
+	if x != nil {
+		return x.Seq
+	}
+	return 0
+}
+
+func (x *MsgACK) GetConvId() uint64 {
+	if x != nil {
+		return x.ConvId
+	}
+	return 0
+}
+
+func (x *MsgACK) GetLastMsgId() uint64 {
+	if x != nil {
+		return x.LastMsgId
+	}
+	return 0
+}
+
+// 服务端收到消息请求的回应
+type MsgACKResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	MsgId         uint64                 `protobuf:"varint,1,opt,name=msg_id,json=msgId,proto3" json:"msg_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MsgACKResponse) Reset() {
+	*x = MsgACKResponse{}
+	mi := &file_protocol_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MsgACKResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MsgACKResponse) ProtoMessage() {}
+
+func (x *MsgACKResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_protocol_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MsgACKResponse.ProtoReflect.Descriptor instead.
+func (*MsgACKResponse) Descriptor() ([]byte, []int) {
+	return file_protocol_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *MsgACKResponse) GetMsgId() uint64 {
 	if x != nil {
 		return x.MsgId
 	}
 	return 0
 }
 
-// 单聊消息删除
-type MsgDelete_S struct {
+// 服务端群聊通知
+type GroupMsgNotify struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	MsgId         uint64                 `protobuf:"varint,1,opt,name=msg_id,json=msgId,proto3" json:"msg_id,omitempty"`
+	GroupId       uint64                 `protobuf:"varint,1,opt,name=group_id,json=groupId,proto3" json:"group_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *MsgDelete_S) Reset() {
-	*x = MsgDelete_S{}
-	mi := &file_protocol_proto_msgTypes[3]
+func (x *GroupMsgNotify) Reset() {
+	*x = GroupMsgNotify{}
+	mi := &file_protocol_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *MsgDelete_S) String() string {
+func (x *GroupMsgNotify) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*MsgDelete_S) ProtoMessage() {}
+func (*GroupMsgNotify) ProtoMessage() {}
 
-func (x *MsgDelete_S) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_proto_msgTypes[3]
+func (x *GroupMsgNotify) ProtoReflect() protoreflect.Message {
+	mi := &file_protocol_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -276,14 +337,14 @@ func (x *MsgDelete_S) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use MsgDelete_S.ProtoReflect.Descriptor instead.
-func (*MsgDelete_S) Descriptor() ([]byte, []int) {
-	return file_protocol_proto_rawDescGZIP(), []int{3}
+// Deprecated: Use GroupMsgNotify.ProtoReflect.Descriptor instead.
+func (*GroupMsgNotify) Descriptor() ([]byte, []int) {
+	return file_protocol_proto_rawDescGZIP(), []int{4}
 }
 
-func (x *MsgDelete_S) GetMsgId() uint64 {
+func (x *GroupMsgNotify) GetGroupId() uint64 {
 	if x != nil {
-		return x.MsgId
+		return x.GroupId
 	}
 	return 0
 }
@@ -312,17 +373,23 @@ var file_protocol_proto_rawDesc = []byte{
 	0x72, 0x65, 0x63, 0x65, 0x69, 0x76, 0x65, 0x72, 0x5f, 0x69, 0x64, 0x18, 0x04, 0x20, 0x01, 0x28,
 	0x04, 0x52, 0x0a, 0x72, 0x65, 0x63, 0x65, 0x69, 0x76, 0x65, 0x72, 0x49, 0x64, 0x12, 0x21, 0x0a,
 	0x0c, 0x63, 0x6f, 0x6e, 0x74, 0x65, 0x6e, 0x74, 0x5f, 0x74, 0x79, 0x70, 0x65, 0x18, 0x05, 0x20,
-	0x01, 0x28, 0x05, 0x52, 0x0b, 0x63, 0x6f, 0x6e, 0x74, 0x65, 0x6e, 0x74, 0x54, 0x79, 0x70, 0x65,
+	0x01, 0x28, 0x0d, 0x52, 0x0b, 0x63, 0x6f, 0x6e, 0x74, 0x65, 0x6e, 0x74, 0x54, 0x79, 0x70, 0x65,
 	0x12, 0x19, 0x0a, 0x08, 0x69, 0x73, 0x5f, 0x67, 0x72, 0x6f, 0x75, 0x70, 0x18, 0x06, 0x20, 0x01,
 	0x28, 0x08, 0x52, 0x07, 0x69, 0x73, 0x47, 0x72, 0x6f, 0x75, 0x70, 0x12, 0x18, 0x0a, 0x07, 0x63,
 	0x6f, 0x6e, 0x74, 0x65, 0x6e, 0x74, 0x18, 0x07, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x07, 0x63, 0x6f,
-	0x6e, 0x74, 0x65, 0x6e, 0x74, 0x22, 0x29, 0x0a, 0x10, 0x4d, 0x73, 0x67, 0x41, 0x43, 0x4b, 0x52,
-	0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x5f, 0x53, 0x12, 0x15, 0x0a, 0x06, 0x6d, 0x73, 0x67,
-	0x5f, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x04, 0x52, 0x05, 0x6d, 0x73, 0x67, 0x49, 0x64,
-	0x22, 0x24, 0x0a, 0x0b, 0x4d, 0x73, 0x67, 0x44, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x5f, 0x53, 0x12,
-	0x15, 0x0a, 0x06, 0x6d, 0x73, 0x67, 0x5f, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x04, 0x52,
-	0x05, 0x6d, 0x73, 0x67, 0x49, 0x64, 0x42, 0x0d, 0x5a, 0x0b, 0x2e, 0x2f, 0x3b, 0x70, 0x72, 0x6f,
-	0x74, 0x6f, 0x63, 0x6f, 0x6c, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x6e, 0x74, 0x65, 0x6e, 0x74, 0x22, 0x53, 0x0a, 0x06, 0x4d, 0x73, 0x67, 0x41, 0x43, 0x4b, 0x12,
+	0x10, 0x0a, 0x03, 0x73, 0x65, 0x71, 0x18, 0x01, 0x20, 0x01, 0x28, 0x04, 0x52, 0x03, 0x73, 0x65,
+	0x71, 0x12, 0x17, 0x0a, 0x07, 0x63, 0x6f, 0x6e, 0x76, 0x5f, 0x69, 0x64, 0x18, 0x02, 0x20, 0x01,
+	0x28, 0x04, 0x52, 0x06, 0x63, 0x6f, 0x6e, 0x76, 0x49, 0x64, 0x12, 0x1e, 0x0a, 0x0b, 0x6c, 0x61,
+	0x73, 0x74, 0x5f, 0x6d, 0x73, 0x67, 0x5f, 0x69, 0x64, 0x18, 0x03, 0x20, 0x01, 0x28, 0x04, 0x52,
+	0x09, 0x6c, 0x61, 0x73, 0x74, 0x4d, 0x73, 0x67, 0x49, 0x64, 0x22, 0x27, 0x0a, 0x0e, 0x4d, 0x73,
+	0x67, 0x41, 0x43, 0x4b, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x15, 0x0a, 0x06,
+	0x6d, 0x73, 0x67, 0x5f, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x04, 0x52, 0x05, 0x6d, 0x73,
+	0x67, 0x49, 0x64, 0x22, 0x2b, 0x0a, 0x0e, 0x47, 0x72, 0x6f, 0x75, 0x70, 0x4d, 0x73, 0x67, 0x4e,
+	0x6f, 0x74, 0x69, 0x66, 0x79, 0x12, 0x19, 0x0a, 0x08, 0x67, 0x72, 0x6f, 0x75, 0x70, 0x5f, 0x69,
+	0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x04, 0x52, 0x07, 0x67, 0x72, 0x6f, 0x75, 0x70, 0x49, 0x64,
+	0x42, 0x0d, 0x5a, 0x0b, 0x2e, 0x2f, 0x3b, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x63, 0x6f, 0x6c, 0x62,
+	0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -337,12 +404,13 @@ func file_protocol_proto_rawDescGZIP() []byte {
 	return file_protocol_proto_rawDescData
 }
 
-var file_protocol_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
+var file_protocol_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
 var file_protocol_proto_goTypes = []any{
-	(*Packet)(nil),           // 0: protocol.Packet
-	(*Msg)(nil),              // 1: protocol.Msg
-	(*MsgACKResponse_S)(nil), // 2: protocol.MsgACKResponse_S
-	(*MsgDelete_S)(nil),      // 3: protocol.MsgDelete_S
+	(*Packet)(nil),         // 0: protocol.Packet
+	(*Msg)(nil),            // 1: protocol.Msg
+	(*MsgACK)(nil),         // 2: protocol.MsgACK
+	(*MsgACKResponse)(nil), // 3: protocol.MsgACKResponse
+	(*GroupMsgNotify)(nil), // 4: protocol.GroupMsgNotify
 }
 var file_protocol_proto_depIdxs = []int32{
 	0, // [0:0] is the sub-list for method output_type
@@ -363,7 +431,7 @@ func file_protocol_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_protocol_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   4,
+			NumMessages:   5,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
