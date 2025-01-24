@@ -80,27 +80,46 @@ func GroupChatNotify(m *protocol.Msg) {
 	}
 	// 查询在线用户
 	for _, uid := range users {
-		online, con := isUserInLocal(uid)
-		if online {
+		isOnline, mId, err := redis.GetUserMachineID(strconv.FormatUint(uid, 10))
+		if err != nil || !isOnline {
+			if err != nil {
+				log.L().Error("Redis Check User Online", log.Error(err))
+			}
+			continue
+		}
+
+		data, err := protocol.EncodeGroupMsgNotify(&protocol.GroupMsgNotify{GroupId: m.ReceiverId})
+		if err != nil {
+			log.L().Error("Encode GroupMsgNotify", log.Error(err))
+			continue
+		}
+
+		if mId == settings.Conf.ID {
+			// 本地转发
+			con, err := getUserConnection(uid)
+			if err != nil {
+				log.L().Error("Get User Connection", log.Error(err))
+				continue
+			}
 			seq, err := utils.GenID(settings.Conf.MachineID)
 			if err != nil {
 				log.L().Error("Gen Seq", log.Error(err))
-				return
-			}
-			data, err := protocol.EncodeGroupMsgNotify(&protocol.GroupMsgNotify{GroupId: m.ReceiverId})
-			if err != nil {
-				log.L().Error("Encode GroupMsgNotify", log.Error(err))
-				return
+				continue
 			}
 			con.SendWithACK(seq, CmdGC, MsgTypeNotify, data, nil)
 		} else {
-			online, err := redis.IsUserOnline(strconv.FormatUint(uid, 10))
-			if err != nil {
-				log.L().Error("Redis Check User Online", log.Error(err))
-				return
+			// 转发给MQ
+			mq := &MQMsg{
+				SenderMachID:   settings.Conf.ID,
+				ReceivedMachID: mId,
+				UserID:         uid,
+				Cmd:            CmdGC,
+				MsgType:        MsgTypeNotify,
+				Data:           data,
 			}
-			if online {
-				// TODO:转发给对方所在的服务器
+			if err := redis.WriteToMQ(mq); err != nil {
+				log.L().Error("Write To MQ", log.Error(err), log.Any("mq_msg", mq))
+				continue
 			}
 		}
 	}

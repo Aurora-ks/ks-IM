@@ -44,28 +44,43 @@ func SingleChatDelHandler(con *Connection, p *protocol.Packet) {
 		con.SendError(p.Seq, p.Cmd)
 		return
 	}
-	// 通知对方
-	user, ok := connectionsMap.Load(m.ReceiverId)
-	if ok {
-		conn, ok := user.(*Connection)
-		if !ok {
-			log.L().Error("Get Invalid Type In ConnectionMap", log.Uint64("user_id", m.ReceiverId), log.String("type", reflect.TypeOf(user).String()))
-			return
-		}
-		seq, err := utils.GenID(settings.Conf.MachineID)
-		if err != nil {
-			log.L().Error("Gen Seq", log.Error(err))
-			return
-		}
-		conn.Send(seq, CmdMsgDelS, MsgTypeNotify, p.Data)
-	} else {
-		online, err := redis.IsUserOnline(strconv.FormatUint(m.ReceiverId, 10))
+	// 查询对方是否在线并通知对方
+	online, mId, err := redis.GetUserMachineID(strconv.FormatUint(m.ReceiverId, 10))
+	if err != nil || !online {
 		if err != nil {
 			log.L().Error("Redis Check User Online", log.Error(err))
-			return
 		}
-		if online {
-			// TODO:转发给对方所在的服务器
+		return
+	}
+
+	if mId == settings.Conf.ID {
+		// 在本地服务器中转发
+		user, ok := connectionsMap.Load(m.ReceiverId)
+		if ok {
+			conn, ok := user.(*Connection)
+			if !ok {
+				log.L().Error("Get Invalid Type In ConnectionMap", log.Uint64("user_id", m.ReceiverId), log.String("type", reflect.TypeOf(user).String()))
+				return
+			}
+			seq, err := utils.GenID(settings.Conf.MachineID)
+			if err != nil {
+				log.L().Error("Gen Seq", log.Error(err))
+				return
+			}
+			conn.Send(seq, CmdMsgDelS, MsgTypeNotify, p.Data)
+		}
+	} else {
+		// 转发给相应的MQ
+		mqData := &MQMsg{
+			SenderMachID:   settings.Conf.ID,
+			ReceivedMachID: mId,
+			UserID:         m.ReceiverId,
+			Cmd:            CmdSC,
+			MsgType:        MsgTypeNotify,
+			Data:           p.Data,
+		}
+		if err := redis.WriteToMQ(mqData); err != nil {
+			log.L().Error("Write To MQ", log.Error(err), log.Any("msg", p))
 		}
 	}
 }
@@ -73,31 +88,45 @@ func SingleChatDelHandler(con *Connection, p *protocol.Packet) {
 // SingleChatNotify 单聊消息通知
 func SingleChatNotify(m *protocol.Msg) {
 	// 查询是否在线
-	online, con := isUserInLocal(m.ReceiverId)
-	if online {
-		// 在同一服务器中，直接转发
-		// 生成序列号
+	isOnline, mId, err := redis.GetUserMachineID(strconv.FormatUint(m.ReceiverId, 10))
+	if err != nil || !isOnline {
+		if err != nil {
+			log.L().Error("Redis Check User Online", log.Error(err))
+		}
+		return
+	}
+
+	data, err := protocol.EncodeMsg(m)
+	if err != nil {
+		log.L().Error("Encode Msg", log.Error(err), log.Any("msg", m))
+		return
+	}
+
+	if mId == settings.Conf.ID {
+		// 本地转发
+		con, err := getUserConnection(m.ReceiverId)
+		if err != nil {
+			log.L().Error("Get User Connection", log.Error(err))
+			return
+		}
 		seq, err := utils.GenID(settings.Conf.MachineID)
 		if err != nil {
 			log.L().Error("Gen Seq", log.Error(err))
 			return
 		}
-		// 数据编码
-		data, err := protocol.EncodeMsg(m)
-		if err != nil {
-			log.L().Error("Encode Msg", log.Error(err), log.Any("msg", m))
-			return
-		}
-		// 发送
 		con.SendWithACK(seq, CmdSC, MsgTypeNotify, data, nil)
 	} else {
-		online, err := redis.IsUserOnline(strconv.FormatUint(m.ReceiverId, 10))
-		if err != nil {
-			log.L().Error("Redis Check User Online", log.Error(err))
-			return
+		// 转发给MQ
+		mq := &MQMsg{
+			SenderMachID:   settings.Conf.ID,
+			ReceivedMachID: mId,
+			UserID:         m.ReceiverId,
+			Cmd:            CmdSC,
+			MsgType:        MsgTypeNotify,
+			Data:           data,
 		}
-		if online {
-			// TODO:转发给对方所在的服务器
+		if err := redis.WriteToMQ(mq); err != nil {
+			log.L().Error("Write To MQ", log.Error(err), log.Any("mq_msg", mq))
 		}
 	}
 }

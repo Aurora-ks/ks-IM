@@ -290,7 +290,16 @@ func getPacket(seq uint64) (p *protocol.Packet, err error) {
 	return
 }
 
-// isUserInLocal 查询用户是否在本地服务器在线
+// 获取用户连接
+func getUserConnection(uid uint64) (*Connection, error) {
+	value, ok := connectionsMap.Load(uid)
+	if !ok {
+		return nil, fmt.Errorf("user not found")
+	}
+	return value.(*Connection), nil
+}
+
+// 查询用户是否在本地服务器在线
 func isUserInLocal(uid uint64) (isOnline bool, con *Connection) {
 	connectionsMap.Range(func(key, value any) bool {
 		if key.(uint64) == uid {

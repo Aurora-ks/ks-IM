@@ -2,8 +2,10 @@ package main
 
 import (
 	"Message/consul"
+	"Message/db/mysql"
 	"Message/db/redis"
 	"Message/log"
+	"Message/logic"
 	"Message/router"
 	"Message/settings"
 	"context"
@@ -26,12 +28,12 @@ func main() {
 		return
 	}
 
-	/*if err := consul.Init(); err != nil {
+	if err := consul.Init(); err != nil {
 		log.L().Error("Consul Connect", log.Error(err))
 		return
 	}
 
-	if err := RegisterService(); err != nil {
+	if err := registerService(); err != nil {
 		log.L().Error("Register Service", log.Error(err))
 		return
 	}
@@ -44,12 +46,14 @@ func main() {
 	if err := mysql.Init(); err != nil {
 		log.L().Error("Mysql Init", log.Error(err))
 		return
-	}*/
+	}
+	defer mysql.Close()
 
 	if err := redis.Init(); err != nil {
 		log.L().Error("Redis Init", log.Error(err))
 		return
 	}
+	defer redis.Close()
 
 	r := router.SetUp()
 	srv := &http.Server{
@@ -63,13 +67,17 @@ func main() {
 		}
 	}()
 
+	c, done := context.WithCancel(context.Background())
+	go logic.ListenMQ(c)
+
 	log.L().Info(fmt.Sprintf("[%s] Runing On Port %d", settings.Conf.ServerConfig.ID, settings.Conf.ServerConfig.Port))
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
+	done()
 	log.L().Info("Shutdown Server")
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	if err := srv.Shutdown(ctx); err != nil {
@@ -79,7 +87,7 @@ func main() {
 	log.L().Info("Server Exiting")
 }
 
-func GetIpv4() (ips []string, err error) {
+func getIpv4() (ips []string, err error) {
 	ifaces, err := net.Interfaces()
 	if err != nil {
 		return
@@ -115,8 +123,8 @@ func GetIpv4() (ips []string, err error) {
 	return
 }
 
-func RegisterService() (err error) {
-	ips, err := GetIpv4()
+func registerService() (err error) {
+	ips, err := getIpv4()
 	if err != nil {
 		return
 	}
