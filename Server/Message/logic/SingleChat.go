@@ -44,6 +44,20 @@ func SingleChatDelHandler(con *Connection, p *protocol.Packet) {
 		con.SendError(p.Seq, p.Cmd)
 		return
 	}
+	seq, err := utils.GenID(settings.Conf.MachineID)
+	if err != nil {
+		log.L().Error("Gen Seq", log.Error(err))
+		con.SendError(p.Seq, p.Cmd)
+		return
+	}
+	data, err := protocol.EncodeMsgACK(&protocol.MsgACK_S{Seq: p.Seq})
+	if err != nil {
+		log.L().Error("Encode MsgACK", log.Error(err), log.Any("msg", p))
+		con.SendError(p.Seq, p.Cmd)
+		return
+	}
+	// 回复ACK
+	con.Send(seq, p.Cmd, MsgTypeACK, data)
 	// 查询对方是否在线并通知对方
 	online, mId, err := redis.GetUserMachineID(strconv.FormatUint(m.ReceiverId, 10))
 	if err != nil || !online {
@@ -67,7 +81,7 @@ func SingleChatDelHandler(con *Connection, p *protocol.Packet) {
 				log.L().Error("Gen Seq", log.Error(err))
 				return
 			}
-			conn.Send(seq, CmdMsgDelS, MsgTypeNotify, p.Data)
+			conn.SendWithACK(seq, CmdMsgDelS, MsgTypeNotify, p.Data, nil)
 		}
 	} else {
 		// 转发给相应的MQ
@@ -166,13 +180,19 @@ func requestSC(con *Connection, p *protocol.Packet) {
 		return
 	}
 	// 发送ACK附带消息ID
-	data, err := protocol.EncodeMsgACKResp(&protocol.MsgACKResponse{MsgId: m.MsgId})
+	seq, err := utils.GenID(settings.Conf.MachineID)
+	if err != nil {
+		log.L().Error("Gen Seq", log.Error(err))
+		con.SendError(p.Seq, p.Cmd)
+		return
+	}
+	data, err := protocol.EncodeMsgACK(&protocol.MsgACK_S{Seq: p.Seq, MsgId: &msgID})
 	if err != nil {
 		log.L().Error("Encode MsgACKRes_S", log.Error(err), log.Any("msg", p))
 		con.SendError(p.Seq, p.Cmd)
 		return
 	}
-	con.Send(p.Seq, CmdSC, MsgTypeACK, data)
+	con.Send(seq, CmdSC, MsgTypeACK, data)
 	// 发送新消息通知
 	SingleChatNotify(m)
 }
@@ -202,7 +222,7 @@ func ackSC(con *Connection, p *protocol.Packet) {
 		return
 	}
 	// 处理ACK
-	if ack.ConvId == 0 {
+	if ack.GetConvId() == 0 {
 		// 创建新会话
 		cid, err := mysql.CreateNewConversation(msg.ReceiverId, msg.SenderId, false)
 		if err != nil {
@@ -210,9 +230,9 @@ func ackSC(con *Connection, p *protocol.Packet) {
 			con.SendError(p.Seq, p.Cmd)
 			return
 		}
-		ack.ConvId = cid
+		ack.ConvId = &cid
 	}
-	if err = mysql.UpdateConversation(ack.ConvId, ack.LastMsgId); err != nil {
+	if err = mysql.UpdateConversation(ack.GetConvId(), ack.GetLastMsgId()); err != nil {
 		log.L().Error("Update Conversation", log.Error(err), log.Any("msg", p))
 		con.SendError(p.Seq, p.Cmd)
 		return
