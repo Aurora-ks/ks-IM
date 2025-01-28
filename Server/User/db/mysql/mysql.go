@@ -389,13 +389,24 @@ func GroupJoinApplyDeal(applyID, userID, groupID, status int) (err error) {
 }
 
 // GetGroupMemberList 获取群所有成员信息
-func GetGroupMemberList(gid int) (info []*model.GroupMember, err error) {
-	stm := "SELECT id, user_id, group_id, role, join_at FROM group_members WHERE group_id = ? AND deleted = 0"
-	rows, err := db.Query(stm, gid)
+func GetGroupMemberList(gid, role int) (info []*model.GroupMember, err error) {
+	if role < GrpRoleAll || role > GrpRoleOwner {
+		err = fmt.Errorf("invalid role")
+		return
+	}
+	var rows *sql.Rows
+	if role == GrpRoleAll {
+		stm := "SELECT id, user_id, group_id, role, join_at FROM group_members WHERE group_id = ? AND deleted = 0"
+		rows, err = db.Query(stm, gid)
+	} else {
+		stm := "SELECT id, user_id, group_id, role, join_at FROM group_members WHERE group_id = ? AND role = ? AND deleted = 0"
+		rows, err = db.Query(stm, gid, role)
+	}
 	if err != nil {
 		return
 	}
 	defer rows.Close()
+
 	for rows.Next() {
 		grp := new(model.GroupMember)
 		if err = rows.Scan(&grp.Id, &grp.UserId, &grp.GroupId, &grp.Role, &grp.JoinAt); err != nil {

@@ -2,9 +2,11 @@ package logic
 
 import (
 	"User/db/mysql"
+	"User/db/redis"
 	"User/ec"
 	"User/log"
 	"User/model"
+	"User/settings"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -66,7 +68,25 @@ func AddFriend(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, OK(data))
-	// TODO:推送消息
+	// 推送消息
+	online, machID, err := redis.GetUserMachineID(strconv.Itoa(req.FriendID))
+	if err != nil || !online {
+		if err != nil {
+			log.L().Error("Get User Machine ID", log.Error(err))
+		}
+		return
+	}
+	if err := redis.WriteToMQ(&MQMsg{
+		SenderMachID:   settings.Conf.ID,
+		ReceivedMachID: machID,
+		UserID:         uint64(req.FriendID),
+		Cmd:            CmdRelApply,
+		MsgType:        MsgTypeNotify,
+		Data:           nil,
+	}); err != nil {
+		log.L().Error("Write To MQ", log.Error(err))
+		return
+	}
 }
 
 // RespNewFriend 响应好友申请

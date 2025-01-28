@@ -2,9 +2,11 @@ package logic
 
 import (
 	"User/db/mysql"
+	"User/db/redis"
 	"User/ec"
 	"User/log"
 	"User/model"
+	"User/settings"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -147,7 +149,27 @@ func ApplyJoinGroup(c *gin.Context) {
 			log.L().Error("DB Apply Join Group", log.Error(err))
 			return
 		}
-		// TODO:推送消息
+		// 获取所有在线的群管理
+		// 推送消息
+		online, machID, err := redis.GetUserMachineID(strconv.Itoa(req.UserID))
+		if err != nil || !online {
+			if err != nil {
+				log.L().Error("Get User Machine ID", log.Error(err))
+			}
+			return
+		}
+		// 推送消息队列
+		if err := redis.WriteToMQ(&MQMsg{
+			SenderMachID:   settings.Conf.ID,
+			ReceivedMachID: machID,
+			UserID:         uint64(req.UserID),
+			Cmd:            CmdGrpApply,
+			MsgType:        MsgTypeNotify,
+			Data:           nil,
+		}); err != nil {
+			log.L().Error("Write To MQ", log.Error(err))
+			return
+		}
 	}
 }
 
@@ -229,7 +251,51 @@ func GroupJoinApplyDeal(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, OK())
-	// TODO:推送消息
+	// 给申请人推送消息
+	online, machID, err := redis.GetUserMachineID(strconv.Itoa(req.UserID))
+	if err != nil || !online {
+		if err != nil {
+			log.L().Error("Get User Machine ID", log.Error(err))
+		}
+		return
+	}
+	if err := redis.WriteToMQ(&MQMsg{
+		SenderMachID:   settings.Conf.ID,
+		ReceivedMachID: machID,
+		UserID:         uint64(req.UserID),
+		Cmd:            CmdGrpApplyResp,
+		MsgType:        MsgTypeNotify,
+		Data:           nil,
+	}); err != nil {
+		log.L().Error("Write To MQ", log.Error(err))
+		return
+	}
+	// 给群在线成员推送消息
+	members, err := mysql.GetGroupMemberList(req.GroupID, mysql.GrpRoleAll)
+	if err != nil {
+		log.L().Error("Get Group Member List", log.Error(err))
+		return
+	}
+	for _, mem := range members {
+		online, machID, err := redis.GetUserMachineID(strconv.Itoa(mem.UserId))
+		if err != nil || !online {
+			if err != nil {
+				log.L().Error("Get User Machine ID", log.Error(err))
+			}
+			continue
+		}
+		if err := redis.WriteToMQ(&MQMsg{
+			SenderMachID:   settings.Conf.ID,
+			ReceivedMachID: machID,
+			UserID:         uint64(req.UserID),
+			Cmd:            CmdGrpMemChange,
+			MsgType:        MsgTypeNotify,
+			Data:           nil,
+		}); err != nil {
+			log.L().Error("Write To MQ", log.Error(err))
+			continue
+		}
+	}
 }
 
 // GetGroupMemberList 获取群组成员列表
@@ -241,7 +307,7 @@ func GetGroupMemberList(c *gin.Context) {
 		log.L().Warn("Group Id Parse Failed", log.Error(err))
 		return
 	}
-	list, err := mysql.GetGroupMemberList(gid)
+	list, err := mysql.GetGroupMemberList(gid, mysql.GrpRoleAll)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		c.JSON(http.StatusOK, Res(ec.DBQuery, "DB Get Group Member List"))
 		log.L().Error("DB Get Group Member List", log.Error(err))
@@ -283,7 +349,32 @@ func QuitGroup(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, OK())
-	// TODO:推送消息
+	// 给所有群在线成员推送消息
+	members, err := mysql.GetGroupMemberList(req.GroupID, mysql.GrpRoleAll)
+	if err != nil {
+		log.L().Error("Get Group Member List", log.Error(err))
+		return
+	}
+	for _, mem := range members {
+		online, machID, err := redis.GetUserMachineID(strconv.Itoa(mem.UserId))
+		if err != nil || !online {
+			if err != nil {
+				log.L().Error("Get User Machine ID", log.Error(err))
+			}
+			continue
+		}
+		if err := redis.WriteToMQ(&MQMsg{
+			SenderMachID:   settings.Conf.ID,
+			ReceivedMachID: machID,
+			UserID:         uint64(req.UserID),
+			Cmd:            CmdGrpMemChange,
+			MsgType:        MsgTypeNotify,
+			Data:           nil,
+		}); err != nil {
+			log.L().Error("Write To MQ", log.Error(err))
+			continue
+		}
+	}
 }
 
 // ModifyGroupMemberRole 修改群成员权限
@@ -319,7 +410,25 @@ func ModifyGroupMemberRole(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, OK())
-	// TODO:推送消息
+	// 推送消息
+	online, machID, err := redis.GetUserMachineID(strconv.Itoa(req.UserID))
+	if err != nil || !online {
+		if err != nil {
+			log.L().Error("Get User Machine ID", log.Error(err))
+		}
+		return
+	}
+	if err := redis.WriteToMQ(&MQMsg{
+		SenderMachID:   settings.Conf.ID,
+		ReceivedMachID: machID,
+		UserID:         uint64(req.UserID),
+		Cmd:            CmdModifyGroupMemberRole,
+		MsgType:        MsgTypeNotify,
+		Data:           nil,
+	}); err != nil {
+		log.L().Error("Write To MQ", log.Error(err))
+		return
+	}
 }
 
 // 成员直接入群
@@ -328,6 +437,31 @@ func addGroupNewMember(userID []int, groupID int) (err error) {
 	if err != nil {
 		return
 	}
-	// TODO:推送消息
+	// 给所有群在线成员推送消息
+	members, err := mysql.GetGroupMemberList(groupID, mysql.GrpRoleAll)
+	if err != nil {
+		log.L().Error("Get Group Member List", log.Error(err))
+		return
+	}
+	for _, mem := range members {
+		online, machID, err := redis.GetUserMachineID(strconv.Itoa(mem.UserId))
+		if err != nil || !online {
+			if err != nil {
+				log.L().Error("Get User Machine ID", log.Error(err))
+			}
+			continue
+		}
+		if err := redis.WriteToMQ(&MQMsg{
+			SenderMachID:   settings.Conf.ID,
+			ReceivedMachID: machID,
+			UserID:         uint64(mem.UserId),
+			Cmd:            CmdGrpMemChange,
+			MsgType:        MsgTypeNotify,
+			Data:           nil,
+		}); err != nil {
+			log.L().Error("Write To MQ", log.Error(err))
+			continue
+		}
+	}
 	return
 }
