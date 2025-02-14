@@ -1,3 +1,4 @@
 /.idea
+/Client/.idea
 /Server/**/.idea
 /Server/**/*.log
