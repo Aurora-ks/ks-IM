@@ -1,10 +1,10 @@
 #ifndef REGISTERWINDOW_H
 #define REGISTERWINDOW_H
 
-#include <ElaWidget.h>
-#include <ElaLineEdit.h>
-#include <ElaPushButton.h>
-#include <ElaIconButton.h>
+#include <Ela/ElaWidget.h>
+#include <Ela/ElaLineEdit.h>
+#include <Ela/ElaPushButton.h>
+#include <Ela/ElaIconButton.h>
 #include "RegisterWindow.h"
 
 class RegisterWindow : public ElaWidget {

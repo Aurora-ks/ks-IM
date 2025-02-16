@@ -1,8 +1,8 @@
-#include "LoginWindow.h"
 #include <QBoxLayout>
-#include <ElaMessageBar.h>
-
+#include <Ela/ElaMessageBar.h>
+#include "LoginWindow.h"
 #include "logger.h"
+
 
 LoginWindow::LoginWindow(QWidget *parent): ElaWidget(parent) {
     setWindowTitle("登录");

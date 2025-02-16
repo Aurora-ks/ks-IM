@@ -1,12 +1,12 @@
 #ifndef LOGINWINDOW_H
 #define LOGINWINDOW_H
 
-#include <ElaWidget.h>
-#include <ElaLineEdit.h>
-#include <ElaPushButton.h>
-#include <ElaCheckBox.h>
-#include <ElaIconButton.h>
-#include <ElaComboBox.h>
+#include <Ela/ElaWidget.h>
+#include <Ela/ElaLineEdit.h>
+#include <Ela/ElaPushButton.h>
+#include <Ela/ElaCheckBox.h>
+#include <Ela/ElaIconButton.h>
+#include <Ela/ElaComboBox.h>
 #include "RegisterWindow.h"
 
 class LoginWindow : public ElaWidget {
