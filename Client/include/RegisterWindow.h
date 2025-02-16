@@ -5,7 +5,7 @@
 #include <Ela/ElaLineEdit.h>
 #include <Ela/ElaPushButton.h>
 #include <Ela/ElaIconButton.h>
-#include "RegisterWindow.h"
+#include <QTimer>
 
 class RegisterWindow : public ElaWidget {
 public:
@@ -20,6 +20,7 @@ private slots:
 
     void signUp();
 
+    void onTimeout();
 private:
     ElaLineEdit *usernameEdit_{nullptr};
     ElaLineEdit *passwordEdit_{nullptr};
@@ -30,7 +31,8 @@ private:
     ElaPushButton *sendCodeButton_{nullptr};
     ElaLineEdit *verificationCodeEdit_{nullptr};
     ElaPushButton *registerButton_{nullptr};
-
+    QTimer *verifyButtonTimer_{nullptr};
+    int verifyButtonInterval_{60}; // second
     void initUI();
 };
 

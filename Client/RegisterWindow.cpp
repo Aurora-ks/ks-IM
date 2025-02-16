@@ -1,5 +1,6 @@
 #include "RegisterWindow.h"
 #include <QBoxLayout>
+#include <QTimer>
 
 RegisterWindow::RegisterWindow(QWidget *parent): ElaWidget(parent) {
     setWindowTitle("注册");
@@ -34,9 +35,30 @@ void RegisterWindow::togglePasswordVisibility() {
 }
 
 void RegisterWindow::sendVerificationCode() {
+    // 发送http请求
+
+    if (verifyButtonTimer_ == nullptr) {
+        verifyButtonTimer_ = new QTimer(this);
+        connect(verifyButtonTimer_, &QTimer::timeout, this, &RegisterWindow::onTimeout);
+    }
+    sendCodeButton_->setEnabled(false);
+    verifyButtonInterval_ = 60;
+    sendCodeButton_->setText(QString("%1s").arg(verifyButtonInterval_));
+    verifyButtonTimer_->start(1000);
 }
 
 void RegisterWindow::signUp() {
+}
+
+void RegisterWindow::onTimeout() {
+    --verifyButtonInterval_;
+    if (verifyButtonInterval_ > 0) {
+        sendCodeButton_->setText(QString("%1s").arg(verifyButtonInterval_));
+    } else {
+        verifyButtonTimer_->stop();
+        sendCodeButton_->setEnabled(true);
+        sendCodeButton_->setText("发送验证码");
+    }
 }
 
 void RegisterWindow::initUI() {

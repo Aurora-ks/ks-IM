@@ -17,7 +17,6 @@
     do{ \
         logger::instance().L()->critical("[FATAL] " format " [{}:{}]", ##__VA_ARGS__, __FILE__, __LINE__); \
         logger::instance().L()->flush(); \
-        logger::instance().shutdown(); \
         std::exit(EXIT_FAILURE); \
     }while(0)
 
@@ -47,7 +46,7 @@ public:
 private:
     logger() = default;
 
-    ~logger() = default;
+    ~logger() { shutdown(); }
 
     std::shared_ptr<spdlog::logger> logger_; // 主日志器实例
     std::vector<spdlog::sink_ptr> sinks_; // 日志输出目标集合
