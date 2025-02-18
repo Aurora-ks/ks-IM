@@ -12,7 +12,6 @@ LoginWindow::LoginWindow(QWidget *parent): ElaWidget(parent) {
 
 LoginWindow::~LoginWindow() {
     delete registerWindow_;
-    logger::instance().shutdown();
 }
 
 void LoginWindow::togglePasswordVisibility() {

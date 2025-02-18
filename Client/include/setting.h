@@ -1,6 +1,7 @@
 #ifndef SETTING_H
 #define SETTING_H
 
+#include <logger.h>
 #include <QSettings>
 #include <QSqlDatabase>
 
@@ -41,41 +42,44 @@ public:
 
     ~setting();
 
+    SettingFileType fileType() const { return fileType_; }
+
     SettingError remove(const QString &key, const QString &table = QString());
 
     // INI
     void setValue(const QString &key, const QVariant &value) {
-        if (fileType_ != SettingFileType::INI) throw std::invalid_argument("setting::setting(): invalid filetype");
+        if (fileType_ != SettingFileType::INI) LOG_FATAL("setting::setValue(): invalid filetype");
         setting_->setValue(key, value);
     }
 
     QVariant value(const QString &key, const QVariant &defaultValue = QVariant()) const {
-        if (fileType_ != SettingFileType::INI) throw std::invalid_argument("setting::value(): invalid filetype");
+        if (fileType_ != SettingFileType::INI) LOG_FATAL("setting::value(): invalid filetype");
         return setting_->value(key, defaultValue);
     }
 
     bool contanis(const QString &key) const {
-        if (fileType_ != SettingFileType::INI) throw std::invalid_argument("setting::contanis(): invalid filetype");
+        if (fileType_ != SettingFileType::INI) LOG_FATAL("setting::contanis(): invalid filetype");
         return setting_->contains(key);
     }
 
     void beginGroup(const QString &prefix) {
-        if (fileType_ != SettingFileType::INI) throw std::invalid_argument("setting::beginGroup(): invalid filetype");
+        if (fileType_ != SettingFileType::INI) LOG_FATAL("setting::beginGroup(): invalid filetype");
         setting_->beginGroup(prefix);
     }
 
     void endGroup() {
-        if (fileType_ != SettingFileType::INI) throw std::invalid_argument("setting::endGroup(): invalid filetype");
+        if (fileType_ != SettingFileType::INI) LOG_FATAL("setting::endGroup(): invalid filetype");
         setting_->endGroup();
     }
 
     // SQLite
 
     SettingError dbSetValue(const QString &key, const QString &value, const QString &table = QString());
+
     std::pair<QString, SettingError> dbValue(const QString &key, const QString &defaultValue = QString()) const;
 
     std::pair<QString, SettingError> dbValue(const QString &table, const QString &key,
-                                           const QString &defaultValue = QString()) const;
+                                             const QString &defaultValue = QString()) const;
 
     SettingError setEntries(const QMap<QString, QString> &entries, const QString &table = QString());
 
