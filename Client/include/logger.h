@@ -7,24 +7,24 @@
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <QString>
 
-#define LOG_TRACE(format, ...) logger::instance().L()->trace(format, ##__VA_ARGS__)
-#define LOG_DEBUG(format, ...) logger::instance().L()->debug(format, ##__VA_ARGS__)
-#define LOG_INFO(format, ...) logger::instance().L()->info(format, ##__VA_ARGS__)
-#define LOG_WARN(format, ...) logger::instance().L()->warn(format " [{}:{}]", ##__VA_ARGS__, __FILE__, __LINE__)
-#define LOG_ERROR(format, ...) logger::instance().L()->error(format " [{}:{}]", ##__VA_ARGS__, __FILE__, __LINE__)
-#define LOG_CRITICAL(format, ...) logger::instance().L()->critical(format " [{}:{}]", ##__VA_ARGS__, __FILE__, __LINE__)
+#define LOG_TRACE(format, ...) Logger::instance().L()->trace(format, ##__VA_ARGS__)
+#define LOG_DEBUG(format, ...) Logger::instance().L()->debug(format, ##__VA_ARGS__)
+#define LOG_INFO(format, ...) Logger::instance().L()->info(format, ##__VA_ARGS__)
+#define LOG_WARN(format, ...) Logger::instance().L()->warn(format " [{}:{}]", ##__VA_ARGS__, __FILE__, __LINE__)
+#define LOG_ERROR(format, ...) Logger::instance().L()->error(format " [{}:{}]", ##__VA_ARGS__, __FILE__, __LINE__)
+#define LOG_CRITICAL(format, ...) Logger::instance().L()->critical(format " [{}:{}]", ##__VA_ARGS__, __FILE__, __LINE__)
 #define LOG_FATAL(format, ...) \
     do{ \
-        logger::instance().L()->critical("[FATAL] " format " [{}:{}]", ##__VA_ARGS__, __FILE__, __LINE__); \
-        logger::instance().L()->flush(); \
+        Logger::instance().L()->critical("[FATAL] " format " [{}:{}]", ##__VA_ARGS__, __FILE__, __LINE__); \
+        Logger::instance().L()->flush(); \
         std::exit(EXIT_FAILURE); \
     }while(0)
 
-class logger {
+class Logger {
 public:
     // 获取单例实例
-    static logger &instance() {
-        static logger instance;
+    static Logger &instance() {
+        static Logger instance;
         return instance;
     }
 
@@ -39,14 +39,14 @@ public:
     // 获取日志器（供业务代码使用）
     std::shared_ptr<spdlog::logger> L() { return logger_; }
 
-    logger(const logger &) = delete;
+    Logger(const Logger &) = delete;
 
-    logger &operator=(const logger &) = delete;
+    Logger &operator=(const Logger &) = delete;
 
 private:
-    logger() = default;
+    Logger() = default;
 
-    ~logger() { shutdown(); }
+    ~Logger() { shutdown(); }
 
     std::shared_ptr<spdlog::logger> logger_; // 主日志器实例
     std::vector<spdlog::sink_ptr> sinks_; // 日志输出目标集合

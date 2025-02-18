@@ -6,7 +6,7 @@
 
 // 自定义异常处理器
 void customTerminateHandler() {
-    const auto logger = logger::instance().L();
+    const auto logger = Logger::instance().L();
     logger->critical("!!! 未捕获异常导致程序终止 !!!");
     // 尝试获取异常信息
     try {
@@ -25,7 +25,7 @@ void customTerminateHandler() {
     std::exit(EXIT_FAILURE);
 }
 
-void logger::init(bool enableConsole, bool enableFile, spdlog::level::level_enum level) {
+void Logger::init(bool enableConsole, bool enableFile, spdlog::level::level_enum level) {
     try {
         // 设置全局异常处理器
         std::set_terminate(customTerminateHandler);
@@ -86,7 +86,7 @@ void logger::init(bool enableConsole, bool enableFile, spdlog::level::level_enum
     }
 }
 
-void logger::shutdown() {
+void Logger::shutdown() {
     if (logger_) {
         logger_->flush();
         spdlog::drop("qt_app");  // 注销日志器

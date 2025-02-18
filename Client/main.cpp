@@ -2,13 +2,12 @@
 #include <Ela/ElaApplication.h>
 #include "LoginWindow.h"
 #include "logger.h"
-
 #define DEBUG 1
 // Qt消息处理器（将Qt日志转发到spdlog）
 void qtMessageHandler(QtMsgType type,
                       const QMessageLogContext &context,
                       const QString &msg) {
-    const auto logger = ::logger::instance().L();
+    const auto logger = ::Logger::instance().L();
     const std::string message = msg.toStdString();
     const char *file = context.file ? context.file : "";
 
@@ -36,7 +35,7 @@ int main(int argc, char *argv[]) {
     QApplication a(argc, argv);
     eApp->init();
 
-    logger::instance().init(
+    Logger::instance().init(
 #if DEBUG
         true
 #else

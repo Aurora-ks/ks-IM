@@ -11,7 +11,7 @@ include_directories(include)
 find_package(spdlog CONFIG REQUIRED)
 
 # 指定qt安装目录
-set(CMAKE_PREFIX_PATH "D:/Qt/6.6.1/mingw_64")
+set(CMAKE_PREFIX_PATH "D:/Qt/6.7.3/mingw_64")
 set(ElaDll ${CMAKE_CURRENT_SOURCE_DIR}/lib/ElaWidgetTools.dll)
 
 find_package(
@@ -20,6 +20,8 @@ find_package(
         Gui
         Widgets
         Sql
+        Network
+        WebSockets
         REQUIRED)
 
 add_executable(Client main.cpp
@@ -27,6 +29,7 @@ add_executable(Client main.cpp
         RegisterWindow.cpp
         logger.cpp
         setting.cpp
+        net.cpp
 )
 target_link_libraries(Client
         PRIVATE spdlog::spdlog
@@ -34,6 +37,8 @@ target_link_libraries(Client
         PRIVATE Qt6::Gui
         PRIVATE Qt6::Widgets
         PRIVATE Qt6::Sql
+        PRIVATE Qt6::Network
+        PRIVATE Qt6::WebSockets
         PRIVATE ${ElaDll}
 )
 
@@ -58,7 +63,7 @@ if (WIN32)
                 "${QT_INSTALL_PATH}/plugins/platforms/qwindows${DEBUG_SUFFIX}.dll"
                 "$<TARGET_FILE_DIR:${PROJECT_NAME}>/plugins/platforms/")
     endif ()
-    foreach (QT_LIB Core Gui Widgets Sql)
+    foreach (QT_LIB Core Gui Widgets Sql Network WebSockets)
         add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
                 COMMAND ${CMAKE_COMMAND} -E copy
                 "${QT_INSTALL_PATH}/bin/Qt6${QT_LIB}${DEBUG_SUFFIX}.dll"
