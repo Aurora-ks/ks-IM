@@ -8,7 +8,7 @@
 using enum NetType;
 using enum HttpMethod;
 
-Net::Net(NetType type, const QUrl &url, bool sendJson) {
+Net::Net(NetType type, const QUrl &url, bool sendJson, bool receiveJson) {
     switch (type) {
         case HTTP:
             http_ = new QNetworkAccessManager();
@@ -40,6 +40,7 @@ Net::Net(NetType type, const QUrl &url, bool sendJson) {
     url_ = new QUrl(url);
     type_ = type;
     sendJson_ = sendJson;
+    receiveJson_ = receiveJson;
 }
 
 Net::~Net() {
@@ -57,11 +58,12 @@ Net::~Net() {
     }
 }
 
-void Net::sendHttp(HttpMethod method, const QUrl &url, const QMap<QString, QString> &headers,
-                   const QMap<QString, QString> &query, const QByteArray &body, int timeout) {
+HttpResponse Net::sendHttp(HttpMethod method, const QUrl &url, const QMap<QString, QString> &headers,
+                           const QMap<QString, QString> &query, const QByteArray &body, int timeout) {
     if (type_ != HTTP)
         LOG_FATAL("[net::send()] use on invalid net type");
     *url_ = url;
+    HttpResponse result;
     // 设置请求参数
     QUrlQuery query_url;
     for (auto it = query.begin(); it != query.end(); ++it) {
@@ -91,50 +93,58 @@ void Net::sendHttp(HttpMethod method, const QUrl &url, const QMap<QString, QStri
             reply = http_->deleteResource(request);
             break;
         default:
-            LOG_ERROR("[net::send()] invalid http method: {}", int(method));
+            result.statusCode = 0;
+            result.success = false;
+            result.errorString = "Unsupported HTTP method";
+            return result;
     }
     // 设置超时
+    QEventLoop loop;
     QTimer *timer = new QTimer(reply);
     timer->setSingleShot(true);
-    QObject::connect(timer, &QTimer::timeout, [this, reply, method]() {
+    QObject::connect(reply, &QNetworkReply::finished, &loop, &QEventLoop::quit);
+    QObject::connect(timer, &QTimer::timeout, [this, reply, method, &result, &loop]() {
         LOG_WARN("http request timeout, url: {}, method: {}", url_->toString().toStdString(), int(method));
         if (reply->isRunning()) {
             reply->abort();
-            if (httpErrorCallback_) httpErrorCallback_(-1, "http request timeout");
+            result.success = false;
+            result.errorString = "Request timeout";
+            loop.quit();
         }
     });
+    // 启动定时器和时间循环
     timer->start(timeout);
+    loop.exec(QEventLoop::ExcludeUserInputEvents);
     // 处理响应
-    QObject::connect(reply, &QNetworkReply::finished, [this, timer, reply]() {
-        timer->stop();
-        timer->deleteLater();
-
-        if (reply->error() == QNetworkReply::NoError) {
-            httpReadByteCallback_(reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt(),
-                                  reply->readAll());
-        } else {
-            if (httpErrorCallback_)
-                httpErrorCallback_(reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt(),
-                                   reply->errorString());
+    if(result.success) { // 非超时
+        result.statusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+        if(reply->error() == QNetworkReply::NoError) {
+            result.success = true;
+            if(receiveJson_) result.dataJson = QJsonDocument::fromJson(reply->readAll());
+            else result.dataByte = reply->readAll();
+        }else {
+            result.success = false;
+            result.errorString = reply->errorString();
         }
-        reply->deleteLater();
-    });
+    }
+    reply->deleteLater();
+    return result;
 }
 
-void Net::get(const QMap<QString, QString> &query, const QByteArray &body) {
-    sendHttp(GET, *url_, QMap<QString, QString>(), query, body);
+HttpResponse Net::get(const QMap<QString, QString> &query, const QByteArray &body) {
+    return sendHttp(GET, *url_, QMap<QString, QString>(), query, body);
 }
 
-void Net::getToUrl(const QUrl &url, const QMap<QString, QString> &query, const QByteArray &body) {
-    sendHttp(GET, url, QMap<QString, QString>(), query, body);
+HttpResponse Net::getToUrl(const QUrl &url, const QMap<QString, QString> &query, const QByteArray &body) {
+    return sendHttp(GET, url, QMap<QString, QString>(), query, body);
 }
 
-void Net::post(const QByteArray &body) {
-    sendHttp(POST, *url_, QMap<QString, QString>(), QMap<QString, QString>(), body);
+HttpResponse Net::post(const QByteArray &body) {
+    return sendHttp(POST, *url_, QMap<QString, QString>(), QMap<QString, QString>(), body);
 }
 
-void Net::postToUrl(const QUrl &url, const QByteArray &body) {
-    sendHttp(POST, url, QMap<QString, QString>(), QMap<QString, QString>(), body);
+HttpResponse Net::postToUrl(const QUrl &url, const QByteArray &body) {
+    return sendHttp(POST, url, QMap<QString, QString>(), QMap<QString, QString>(), body);
 }
 
 bool Net::connect() {

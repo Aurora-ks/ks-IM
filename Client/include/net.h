@@ -3,7 +3,15 @@
 
 #include <QNetworkAccessManager>
 #include <QWebSocket>
+#include <QJsonDocument>
 #include <functional>
+
+#define  RELEASE_MOD 0
+#if RELEASE_MOD
+#define HTTP_PREFIX "http://139.199.221.81"
+#else
+#define HTTP_PREFIX "http://127.0.0.1"
+#endif
 
 enum class NetType {
     HTTP,
@@ -17,11 +25,18 @@ enum class HttpMethod {
     DELETE,
 };
 
+struct HttpResponse {
+    bool success;
+    int statusCode;
+    QByteArray dataByte;
+    QJsonDocument dataJson;
+    QString errorString;
+
+    explicit operator bool() const { return success; }
+};
+
 class Net {
 public:
-    // HTTP 回调类型
-    using HttpReadByteCallback = std::function<void(int statusCode, const QByteArray &response)>;
-    using HttpErrorCallback = std::function<void(int statusCode, const QString &error)>;
     // WebSocket 回调类型
     using WsTextCallback = std::function<void(const QString &text)>;
     using WsBinaryCallback = std::function<void(const QByteArray &data)>;
@@ -30,7 +45,7 @@ public:
     using WsErrorCallback = std::function<void(QAbstractSocket::SocketError error)>;
     using WsPongCallback = std::function<void(quint64 elapsedTime, const QByteArray &payload)>;
 
-    explicit Net(NetType type, const QUrl &url = QUrl(), bool sendJson = true);
+    explicit Net(NetType type, const QUrl &url = QUrl(), bool sendJson = true, bool receiveJson = true);
 
     ~Net();
 
@@ -41,11 +56,7 @@ public:
     void setUrl(const QUrl &url) { *url_ = url; }
     QUrl url() const { return *url_; }
 
-    // http
-    void setHttpReadByteCallback(const HttpReadByteCallback &callback) { httpReadByteCallback_ = callback; }
-    void setHttpErrorCallback(const HttpErrorCallback &callback) { httpErrorCallback_ = callback; }
-
-    void sendHttp(
+    HttpResponse sendHttp(
         HttpMethod method,
         const QUrl &url,
         const QMap<QString, QString> &headers = QMap<QString, QString>(),
@@ -54,14 +65,14 @@ public:
         int timeout = 3000
     );
 
-    void get(const QMap<QString, QString> &query = QMap<QString, QString>(), const QByteArray &body = QByteArray());
+    HttpResponse get(const QMap<QString, QString> &query = QMap<QString, QString>(), const QByteArray &body = QByteArray());
 
-    void getToUrl(const QUrl &url, const QMap<QString, QString> &query = QMap<QString, QString>(),
+    HttpResponse getToUrl(const QUrl &url, const QMap<QString, QString> &query = QMap<QString, QString>(),
                   const QByteArray &body = QByteArray());
 
-    void post(const QByteArray &body = QByteArray());
+    HttpResponse post(const QByteArray &body = QByteArray());
 
-    void postToUrl(const QUrl &url, const QByteArray &body = QByteArray());
+    HttpResponse postToUrl(const QUrl &url, const QByteArray &body = QByteArray());
 
     // websocket
     void setWsConectedCallback(const WsConectedCallback &callback) { wsConnectedCallback_ = callback; }
@@ -83,8 +94,6 @@ public:
 
 private:
     QNetworkAccessManager *http_{nullptr};
-    HttpReadByteCallback httpReadByteCallback_;
-    HttpErrorCallback httpErrorCallback_{nullptr};
     QWebSocket *ws_{nullptr};
     WsTextCallback wsTextCallback_;
     WsBinaryCallback wsBinaryCallback_;
@@ -95,6 +104,7 @@ private:
     QUrl *url_{nullptr};
     NetType type_;
     bool sendJson_;
+    bool receiveJson_;
 };
 
 
