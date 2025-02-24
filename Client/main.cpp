@@ -1,6 +1,7 @@
 #include <QApplication>
 #include <Ela/ElaApplication.h>
 #include "LoginWindow.h"
+#include "MainWindow.h"
 #include "logger.h"
 #define DEBUG 1
 // Qt消息处理器（将Qt日志转发到spdlog）
@@ -41,7 +42,7 @@ int main(int argc, char *argv[]) {
 #else
         false
 #endif
-        , false,
+        , true,
 #if DEBUG
         spdlog::level::debug
 #else
@@ -50,8 +51,26 @@ int main(int argc, char *argv[]) {
     );
     qInstallMessageHandler(qtMessageHandler);
 
-    LoginWindow w;
-    w.moveToCenter();
-    w.show();
+    QObject::connect(&a, &QApplication::aboutToQuit, []() {
+       LOG_INFO("application quit");
+    });
+
+    LoginWindow *w = new LoginWindow();
+    MainWindow mw;
+    QObject::connect(w, &LoginWindow::loginSuccess, [&](QString uid) {
+        LOG_INFO("[u{}] show main window", uid.toStdString());
+        mw.moveToCenter();
+        mw.show();
+        w->close();
+        w->deleteLater();
+    });
+    QObject::connect(w, &LoginWindow::destroyed, [&]() {
+        if(!mw.isVisible()) a.quit();
+    });
+
+    w->moveToCenter();
+    w->show();
+    LOG_INFO("show login window");
+
     return QApplication::exec();
 }
