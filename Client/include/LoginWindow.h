@@ -18,7 +18,7 @@ public:
 
     ~LoginWindow();
 signals:
-    void loginSuccess(QString uid);
+    void loginSuccess(const QString &uid);
 private slots:
     void togglePasswordVisibility();
 
