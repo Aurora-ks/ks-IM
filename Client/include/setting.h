@@ -74,11 +74,11 @@ public:
 
     // SQLite
 
-    SettingError dbSetValue(const QString &key, const QString &value, const QString &table = QString());
+    SettingError setValueDB(const QString &key, const QString &value, const QString &table = QString());
 
-    std::pair<QString, SettingError> dbValue(const QString &key, const QString &defaultValue = QString()) const;
+    std::pair<QString, SettingError> valueDB(const QString &key, const QString &defaultValue = QString()) const;
 
-    std::pair<QString, SettingError> dbValue(const QString &table, const QString &key,
+    std::pair<QString, SettingError> valueDBWithTable(const QString &table, const QString &key,
                                              const QString &defaultValue = QString()) const;
 
     SettingError setEntries(const QMap<QString, QString> &entries, const QString &table = QString());
@@ -104,6 +104,9 @@ private:
     QSqlDatabase db_;
     QString filename_;
     SettingFileType fileType_{SettingFileType::NONE};
+
+    std::pair<bool, SettingError> checkTableExists(const QString &table) const;
+    SettingError createTable(const QString &table);
 };
 
 

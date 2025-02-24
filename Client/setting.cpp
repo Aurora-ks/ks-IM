@@ -83,30 +83,34 @@ SettingError setting::remove(const QString &key, const QString &table) {
         return SettingError();
     }
     QSqlQuery query(db_);
-    query.prepare(QString("DELETE FROM '%1' WHERE key = :k").arg(table.isEmpty() ? filename_ : table));
+    query.prepare(QString("DELETE FROM %1 WHERE key = :k").arg(table.isEmpty() ? filename_ : table));
     query.bindValue(":k", key);
     query.exec();
     return SettingError(query.lastError());
 }
 
-SettingError setting::dbSetValue(const QString &key, const QString &value, const QString &table) {
+SettingError setting::setValueDB(const QString &key, const QString &value, const QString &table) {
     if (fileType_ != INI && fileType_ !=  SQLite) LOG_FATAL("setting::setValue(): invalid filetype");
     if (fileType_ == INI) {
         setting_->setValue(key, value);
         return SettingError();
     }
+    if(!table.isEmpty()) {
+        auto err = createTable(table);
+        if (err) return err;
+    }
     QSqlQuery query(db_);
-    query.prepare(QString("INSERT OR REPLACE INTO '%1' (key, value) VALUES (:k, :v)").arg(table.isEmpty() ? filename_ : table));
+    query.prepare(QString("INSERT OR REPLACE INTO %1 (key, value) VALUES (:k, :v)").arg(table.isEmpty() ? filename_ : table));
     query.bindValue(":k", key);
     query.bindValue(":v", value);
     query.exec();
     return SettingError(query.lastError());
 }
 
-std::pair<QString, SettingError> setting::dbValue(const QString &key, const QString &defaultValue) const {
+std::pair<QString, SettingError> setting::valueDB(const QString &key, const QString &defaultValue) const {
     if (fileType_ != SQLite) LOG_FATAL("setting::value(): invalid filetype");
     QSqlQuery query(db_);
-    query.prepare(QString("SELECT value FROM '%1' WHERE key = :k").arg(filename_));
+    query.prepare(QString("SELECT value FROM %1 WHERE key = :k").arg(filename_));
     query.bindValue(":k", key);
     if (!query.exec())
         return std::make_pair(defaultValue, SettingError(query.lastError()));
@@ -115,11 +119,11 @@ std::pair<QString, SettingError> setting::dbValue(const QString &key, const QStr
     return std::make_pair(defaultValue, SettingError());
 }
 
-std::pair<QString, SettingError> setting::dbValue(const QString &table, const QString &key,
+std::pair<QString, SettingError> setting::valueDBWithTable(const QString &table, const QString &key,
                                                 const QString &defaultValue) const {
     if (fileType_ != SQLite) LOG_FATAL("setting::value(): invalid filetype");
     QSqlQuery query(db_);
-    query.prepare(QString("SELECT value FROM '%1' WHERE key = :k").arg(table));
+    query.prepare(QString("SELECT value FROM %1 WHERE key = :k").arg(table));
     query.bindValue(":k", key);
     if (!query.exec())
         return std::make_pair(defaultValue, SettingError(query.lastError()));
@@ -130,8 +134,12 @@ std::pair<QString, SettingError> setting::dbValue(const QString &table, const QS
 
 SettingError setting::setEntries(const QMap<QString, QString> &entries, const QString &table) {
     if (fileType_ != SQLite) LOG_FATAL("setting::setEntries(): invalid filetype");
+    if(!table.isEmpty()) {
+        auto err = createTable(table);
+        if (err) return err;
+    }
     QSqlQuery query(db_);
-    query.prepare(QString("INSERT OR REPLACE INTO '%1' (key, value) VALUES (:k, :v)").arg(table.isEmpty() ? filename_ : table));
+    query.prepare(QString("INSERT OR REPLACE INTO %1 (key, value) VALUES (:k, :v)").arg(table.isEmpty() ? filename_ : table));
     for (auto it = entries.begin(); it != entries.end(); ++it) {
         query.bindValue(":k", it.key());
         query.bindValue(":v", it.value());
@@ -144,7 +152,7 @@ SettingError setting::setEntries(const QMap<QString, QString> &entries, const QS
 std::pair<QMap<QString, QString>, SettingError> setting::entries(const QString &table) const {
     if (fileType_ != SQLite) LOG_FATAL("setting::entries(): invalid filetype");
     QSqlQuery query(db_);
-    query.prepare(QString("SELECT key, value FROM '%1'").arg(table.isEmpty() ? filename_ : table));
+    query.prepare(QString("SELECT key, value FROM %1").arg(table.isEmpty() ? filename_ : table));
     if (!query.exec())
         return std::make_pair(QMap<QString, QString>(), SettingError(query.lastError()));
     QMap<QString, QString> entries;
@@ -156,11 +164,29 @@ std::pair<QMap<QString, QString>, SettingError> setting::entries(const QString &
 std::pair<QList<QString>, SettingError> setting::keys(const QString &table) const {
     if (fileType_ != SQLite) LOG_FATAL("setting::keys(): invalid filetype");
     QSqlQuery query(db_);
-    query.prepare(QString("SELECT key FROM '%1'").arg(table.isEmpty() ? filename_ : table));
+    query.prepare(QString("SELECT key FROM %1").arg(table.isEmpty() ? filename_ : table));
     if (!query.exec())
         return std::make_pair(QList<QString>(), SettingError(query.lastError()));
     QList<QString> keys;
     while (query.next())
         keys.append(query.value(0).toString());
     return std::make_pair(keys, SettingError());
+}
+
+std::pair<bool, SettingError> setting::checkTableExists(const QString &table) const {
+    if (fileType_!= SQLite) LOG_FATAL("setting::checkTableExists(): invalid filetype");
+    QSqlQuery query(db_);
+    query.prepare(QString("SELECT name FROM sqlite_master WHERE type='table' AND name='%1'").arg(table));
+    if (!query.exec())
+        return std::make_pair(false, SettingError(query.lastError()));
+    return std::make_pair(query.next(), SettingError());
+}
+
+SettingError setting::createTable(const QString &table) {
+    if (fileType_!= SQLite) LOG_FATAL("setting::createTable(): invalid filetype");
+    QSqlQuery query(db_);
+    query.prepare(QString("CREATE TABLE IF NOT EXISTS %1 (key TEXT PRIMARY KEY, value TEXT)").arg(table));
+    if (!query.exec())
+        return SettingError(query.lastError());
+    return SettingError();
 }
