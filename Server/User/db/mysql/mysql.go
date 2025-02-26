@@ -47,7 +47,7 @@ func Close() {
 }
 
 // UserRegister 用户注册
-func UserRegister(name, password, email string, gender int) (err error) {
+func UserRegister(name, password, email string, gender int) (id int64, err error) {
 	tx, err := db.Begin()
 	if err != nil {
 		if tx != nil {
@@ -83,12 +83,13 @@ func UserRegister(name, password, email string, gender int) (err error) {
 	}
 	defer stm.Close()
 
-	_, err = stm.Exec(name, gender, pwd, salt, email)
+	res, err := stm.Exec(name, gender, pwd, salt, email)
 	if err != nil {
 		log.L().Error("DB User Insert", log.Error(err))
 		return
 	}
 	tx.Commit()
+	id, err = res.LastInsertId()
 	return
 }
 

@@ -76,7 +76,7 @@ func AddFriend(c *gin.Context) {
 		}
 		return
 	}
-	if err := redis.WriteToMQ(&MQMsg{
+	if err := redis.WriteToMQ(&redis.MQMsg{
 		SenderMachID:   settings.Conf.ID,
 		ReceivedMachID: machID,
 		UserID:         uint64(req.FriendID),

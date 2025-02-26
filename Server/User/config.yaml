@@ -10,7 +10,7 @@ consul:
 
 mysql:
   host: "139.199.221.81"
-  port: 3306
+  port: 3307
   user: "root"
   password: "2004131"
   db: "IM"

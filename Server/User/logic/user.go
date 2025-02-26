@@ -33,17 +33,25 @@ func Register(c *gin.Context) {
 	}
 	// 判断验证码
 	code := redis.GetUserVerifyCode(req.Email)
+	log.L().Info("verify code", log.String("code", code), log.String("req code", req.Verification))
 	if code != req.Verification {
 		c.JSON(http.StatusOK, Res(ec.VerificationNotEqual, "验证码错误"))
 		return
 	}
 	// 添加用户数据
-	if err := mysql.UserRegister(req.Name, req.Password, req.Email, req.Gender); err != nil {
+	id, err := mysql.UserRegister(req.Name, req.Password, req.Email, req.Gender)
+	if err != nil {
 		c.JSON(http.StatusOK, Res(ec.DBInsert, "DB User Register"))
 		log.L().Error("DB User Register", log.Error(err))
 		return
 	}
-	c.JSON(http.StatusOK, OK())
+	data, err := json.Marshal(model.RegisterResp{Id: int(id)})
+	if err != nil {
+		c.JSON(http.StatusOK, Res(ec.JsonMarshal, "Register ID Marshal Failed"))
+		log.L().Error("Register ID Marshal Failed", log.Error(err))
+		return
+	}
+	c.JSON(http.StatusOK, OK(data))
 }
 
 // SendVerifyCode 发送验证码
@@ -66,7 +74,7 @@ func SendVerifyCode(c *gin.Context) {
 	// 设置邮件内容
 	header := fmt.Sprintf("From: %s\r\nTo: %s\r\nSubject: %s\r\n\r\n",
 		settings.Conf.EmailConfig.From, to, "验证码")
-	body := fmt.Sprintf("验证码为：%s\n3分钟内有效", code)
+	body := fmt.Sprintf("验证码为：%s\n 3分钟内有效", code)
 	message := header + body
 	// 发送邮件
 	if err := smtp.SendMail(dsn, auth, settings.Conf.EmailConfig.From, []string{to}, []byte(message)); err != nil && !strings.Contains(err.Error(), "short response") {
@@ -207,6 +215,7 @@ func UpdateIcon(c *gin.Context) {
 // GetUserInfo 获取用户信息
 func GetUserInfo(c *gin.Context) {
 	id := c.Query("id")
+	log.L().Info("GetUserInfo", log.String("id:", id))
 	uid, err := strconv.Atoi(id)
 	if err != nil {
 		c.JSON(http.StatusOK, Res(ec.ParmsInvalid, "User Id Parse Failed"))

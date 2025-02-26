@@ -25,7 +25,7 @@ func SetUp() *gin.Engine {
 
 	UserGroup := apiGroup.Group("/user")
 	UserGroup.GET("/", logic.GetUserInfo)
-	UserGroup.POST("/", logic.Register)
+	UserGroup.POST("/register", logic.Register)
 	UserGroup.GET("/verify_code", logic.SendVerifyCode)
 	UserGroup.POST("/login", logic.Login)
 	UserGroup.POST("/modify", logic.ModifyUserInfo)

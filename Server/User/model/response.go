@@ -1,5 +1,11 @@
 package model
 
+// user
+
+type RegisterResp struct {
+	Id int `json:"id"`
+}
+
 // relationship
 
 type AddFriendResp struct {

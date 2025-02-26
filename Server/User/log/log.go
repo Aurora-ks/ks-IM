@@ -1,11 +1,13 @@
 package log
 
 import (
+	"context"
 	"log/slog"
 	"net"
 	"net/http"
 	"net/http/httputil"
 	"os"
+	"runtime"
 	"runtime/debug"
 	"strings"
 	"time"
@@ -16,6 +18,31 @@ import (
 
 var log *slog.Logger
 
+type customHandler struct {
+	handler slog.Handler
+}
+
+func (h *customHandler) Enabled(ctx context.Context, level slog.Level) bool {
+	return h.handler.Enabled(ctx, level)
+}
+
+func (h *customHandler) Handle(ctx context.Context, record slog.Record) error {
+	// 获取调用处的文件和行号
+	_, file, line, ok := runtime.Caller(3)
+	if ok && record.Level != slog.LevelInfo {
+		record.AddAttrs(slog.String("file", file), slog.Int("line", line))
+	}
+	return h.handler.Handle(ctx, record)
+}
+
+func (h *customHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
+	return &customHandler{handler: h.handler.WithAttrs(attrs)}
+}
+
+func (h *customHandler) WithGroup(name string) slog.Handler {
+	return &customHandler{handler: h.handler.WithGroup(name)}
+}
+
 func Init() {
 	// TODO: use config to load
 	lumberjackLogger := &lumberjack.Logger{
@@ -25,7 +52,9 @@ func Init() {
 		MaxAge:     28,
 		Compress:   true,
 	}
-	log = slog.New(slog.NewJSONHandler(lumberjackLogger, &slog.HandlerOptions{Level: slog.LevelInfo}))
+	jsonHandler := slog.NewJSONHandler(lumberjackLogger, &slog.HandlerOptions{Level: slog.LevelInfo})
+	handler := &customHandler{handler: jsonHandler}
+	log = slog.New(handler)
 }
 
 func L() *slog.Logger {
@@ -49,6 +78,11 @@ func GinLogger() gin.HandlerFunc {
 		start := time.Now()
 		path := c.Request.URL.Path
 		query := c.Request.URL.RawQuery
+		// not log health check
+		if path == "/health" {
+			c.Next()
+			return
+		}
 		c.Next()
 
 		cost := time.Since(start)

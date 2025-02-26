@@ -159,7 +159,7 @@ func ApplyJoinGroup(c *gin.Context) {
 			return
 		}
 		// 推送消息队列
-		if err := redis.WriteToMQ(&MQMsg{
+		if err := redis.WriteToMQ(&redis.MQMsg{
 			SenderMachID:   settings.Conf.ID,
 			ReceivedMachID: machID,
 			UserID:         uint64(req.UserID),
@@ -259,7 +259,7 @@ func GroupJoinApplyDeal(c *gin.Context) {
 		}
 		return
 	}
-	if err := redis.WriteToMQ(&MQMsg{
+	if err := redis.WriteToMQ(&redis.MQMsg{
 		SenderMachID:   settings.Conf.ID,
 		ReceivedMachID: machID,
 		UserID:         uint64(req.UserID),
@@ -284,7 +284,7 @@ func GroupJoinApplyDeal(c *gin.Context) {
 			}
 			continue
 		}
-		if err := redis.WriteToMQ(&MQMsg{
+		if err := redis.WriteToMQ(&redis.MQMsg{
 			SenderMachID:   settings.Conf.ID,
 			ReceivedMachID: machID,
 			UserID:         uint64(req.UserID),
@@ -363,7 +363,7 @@ func QuitGroup(c *gin.Context) {
 			}
 			continue
 		}
-		if err := redis.WriteToMQ(&MQMsg{
+		if err := redis.WriteToMQ(&redis.MQMsg{
 			SenderMachID:   settings.Conf.ID,
 			ReceivedMachID: machID,
 			UserID:         uint64(req.UserID),
@@ -418,7 +418,7 @@ func ModifyGroupMemberRole(c *gin.Context) {
 		}
 		return
 	}
-	if err := redis.WriteToMQ(&MQMsg{
+	if err := redis.WriteToMQ(&redis.MQMsg{
 		SenderMachID:   settings.Conf.ID,
 		ReceivedMachID: machID,
 		UserID:         uint64(req.UserID),
@@ -451,7 +451,7 @@ func addGroupNewMember(userID []int, groupID int) (err error) {
 			}
 			continue
 		}
-		if err := redis.WriteToMQ(&MQMsg{
+		if err := redis.WriteToMQ(&redis.MQMsg{
 			SenderMachID:   settings.Conf.ID,
 			ReceivedMachID: machID,
 			UserID:         uint64(mem.UserId),
