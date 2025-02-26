@@ -25,7 +25,7 @@ func SetUp() *gin.Engine {
 		forwardRequest(context, "user")
 	})
 	// 注册
-	user.POST("", func(context *gin.Context) {
+	user.POST("/register", func(context *gin.Context) {
 		forwardRequest(context, "user")
 	})
 	// 登录
