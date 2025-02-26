@@ -8,6 +8,21 @@
 using enum NetType;
 using enum HttpMethod;
 
+void HttpResponse::parseJson(const QByteArray &data) {
+    if (data.isEmpty()) return;
+    QJsonDocument jsonDoc = QJsonDocument::fromJson(data);
+    if(jsonDoc.isNull()) return;
+    json_.data_ = jsonDoc;
+    QJsonObject jsonObject = jsonDoc.object();
+    json_.code_ = jsonObject["code"].toInt();
+    json_.message_ = jsonObject["message"].toString();
+    if(jsonObject["data"].isNull()) return;
+    QJsonDocument dataDoc = QJsonDocument::fromJson(QByteArray::fromBase64(jsonObject["data"].toString().toUtf8()));
+    if(dataDoc.isNull()) return;
+    if(dataDoc.isObject()) json_.dataJson_ = dataDoc.object();
+    else if(dataDoc.isArray()) json_.dataArray_ = dataDoc.array();
+}
+
 Net::Net(NetType type, const QUrl &url, bool sendJson, bool receiveJson) {
     switch (type) {
         case HTTP:
@@ -71,7 +86,7 @@ HttpResponse Net::sendHttp(HttpMethod method, const QUrl &url, const QMap<QStrin
     }
     url_->setQuery(query_url);
     // 设置请求头
-    QNetworkRequest request(url);
+    QNetworkRequest request(*url_);
     for (auto it = headers.begin(); it != headers.end(); ++it) {
         request.setRawHeader(it.key().toUtf8(), it.value().toUtf8());
     }
@@ -93,9 +108,9 @@ HttpResponse Net::sendHttp(HttpMethod method, const QUrl &url, const QMap<QStrin
             reply = http_->deleteResource(request);
             break;
         default:
-            result.statusCode = 0;
-            result.success = false;
-            result.errorString = "Unsupported HTTP method";
+            result.statusCode_ = 0;
+            result.success_ = false;
+            result.errorString_ = "Unsupported HTTP method";
             return result;
     }
     // 设置超时
@@ -107,8 +122,8 @@ HttpResponse Net::sendHttp(HttpMethod method, const QUrl &url, const QMap<QStrin
         LOG_WARN("http request timeout, url: {}, method: {}", url_->toString().toStdString(), int(method));
         if (reply->isRunning()) {
             reply->abort();
-            result.success = false;
-            result.errorString = "Request timeout";
+            result.success_ = false;
+            result.errorString_ = "Request timeout";
             loop.quit();
         }
     });
@@ -116,15 +131,16 @@ HttpResponse Net::sendHttp(HttpMethod method, const QUrl &url, const QMap<QStrin
     timer->start(timeout);
     loop.exec(QEventLoop::ExcludeUserInputEvents);
     // 处理响应
-    if(result.success) { // 非超时
-        result.statusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
-        if(reply->error() == QNetworkReply::NoError) {
-            result.success = true;
-            if(receiveJson_) result.dataJson = QJsonDocument::fromJson(reply->readAll());
-            else result.dataByte = reply->readAll();
-        }else {
-            result.success = false;
-            result.errorString = reply->errorString();
+    if (reply) {
+        // 非超时
+        result.statusCode_ = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+        if (reply->error() == QNetworkReply::NoError) {
+            result.success_ = true;
+            if (receiveJson_) result.parseJson(reply->readAll());
+            else result.dataByte_ = reply->readAll();
+        } else {
+            result.success_ = false;
+            result.errorString_ = reply->errorString();
         }
     }
     reply->deleteLater();

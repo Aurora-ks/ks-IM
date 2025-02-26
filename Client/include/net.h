@@ -4,6 +4,8 @@
 #include <QNetworkAccessManager>
 #include <QWebSocket>
 #include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonArray>
 #include <functional>
 
 #define  RELEASE_MOD 0
@@ -25,15 +27,43 @@ enum class HttpMethod {
     DELETE,
 };
 
-struct HttpResponse {
-    bool success;
-    int statusCode;
-    QByteArray dataByte;
-    QJsonDocument dataJson;
-    QString errorString;
-
-    explicit operator bool() const { return success; }
+class HttpJson {
+public:
+    friend class HttpResponse;
+    HttpJson() = default;
+    ~HttpJson() = default;
+    operator bool() const { return code_ == 0; }
+    int code() const { return code_; }
+    QString message() const { return message_; }
+    QJsonDocument data() const { return data_; }
+    QJsonObject dataJson() const { return dataJson_; }
+    QJsonArray dataArray() const { return dataArray_; }
+private:
+    int code_{-1};
+    QString message_;
+    QJsonDocument data_;
+    QJsonObject dataJson_;
+    QJsonArray dataArray_;
 };
+
+class HttpResponse {
+public:
+    friend class Net;
+    HttpResponse() = default;
+    ~HttpResponse() = default;
+    operator bool() const { return success_; }
+    void parseJson(const QByteArray &data);
+    int statusCode() const { return statusCode_; }
+    QString errorString() const { return errorString_; }
+    HttpJson data() const { return json_; }
+private:
+    bool success_;
+    int statusCode_;
+    QString errorString_;
+    HttpJson json_;
+    QByteArray dataByte_;
+};
+
 
 class Net {
 public:
