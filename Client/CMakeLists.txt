@@ -24,13 +24,20 @@ find_package(
         WebSockets
         REQUIRED)
 
-add_executable(Client main.cpp
+add_executable(Client
+        resources.qrc
+        main.cpp
         LoginWindow.cpp
+        include/LoginWindow.h
         RegisterWindow.cpp
         logger.cpp
         setting.cpp
         net.cpp
+        MainWindow.cpp
+        include/MainWindow.h
+        user.cpp
 )
+
 target_link_libraries(Client
         PRIVATE spdlog::spdlog
         PRIVATE Qt6::Core

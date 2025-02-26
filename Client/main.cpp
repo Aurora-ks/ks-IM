@@ -57,8 +57,10 @@ int main(int argc, char *argv[]) {
 
     LoginWindow *w = new LoginWindow();
     MainWindow mw;
-    QObject::connect(w, &LoginWindow::loginSuccess, [&](QString uid) {
-        LOG_INFO("[u{}] show main window", uid.toStdString());
+    QObject::connect(w, &LoginWindow::loginSuccess, [&](const QString &uid) {
+        LOG_INFO("u[{}] show main window", uid.toStdString());
+        mw.bindUser(uid);
+        mw.updateUserInfo();
         mw.moveToCenter();
         mw.show();
         w->close();

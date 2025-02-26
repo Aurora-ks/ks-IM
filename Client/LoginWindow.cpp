@@ -3,6 +3,7 @@
 #include <QJsonObject>
 #include <QFileInfo>
 #include <QDir>
+#include <QEvent>
 #include <Ela/ElaMessageBar.h>
 #include "LoginWindow.h"
 #include "logger.h"
@@ -70,14 +71,24 @@ void LoginWindow::login() {
     LOG_INFO("send login request");
     Net http(NetType::HTTP, QUrl(HTTP_PREFIX"/user/login"));
     QJsonObject json;
-    json["id"] = name;
+    json["id"] = name.toInt();
     json["password"] = password;
-    auto resp = http.post(QJsonDocument(json).toJson());
-    if (resp) {
-        storeConf();
-        emit loginSuccess(name);
+    auto resp = http.post(QJsonDocument(json).toJson(QJsonDocument::Compact));
+    if(!resp) {
+        qWarning() << QString("u[%1], c[LoginWindow::login] login request failed, code:%2, err:%3").arg(name).arg(resp.statusCode()).arg(resp.errorString());
+        ElaMessageBar::error(ElaMessageBarType::Top, "登录失败", "网络错误", 2000, this);
+        return;
     }
-    else ElaMessageBar::error(ElaMessageBarType::Top, "登录失败", "用户名或密码错误", 2000, this);
+
+    auto resJson = resp.data();
+    if(!resJson) {
+        qWarning() << "[LoginWindow::login] login falied, code:" << resJson.code() << ", message:" << resJson.message();
+        ElaMessageBar::error(ElaMessageBarType::Top, "登录失败", "用户名或密码错误", 2000, this);
+        return;
+    }
+    QJsonObject user = resJson.dataJson();
+    storeConf();
+    emit loginSuccess(QString::number(user["id"].toInt()));
 }
 
 void LoginWindow::signUp() {

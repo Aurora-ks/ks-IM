@@ -1,8 +1,13 @@
 #include "RegisterWindow.h"
 #include <QBoxLayout>
 #include <QTimer>
+#include <QButtonGroup>
+#include <Ela/ElaMessageBar.h>
+#include <Ela/ElaText.h>
+#include "logger.h"
+#include "net.h"
 
-RegisterWindow::RegisterWindow(QWidget *parent): ElaWidget(parent) {
+RegisterWindow::RegisterWindow(QWidget *parent): ElaWidget(parent), http_(new Net(NetType::HTTP)) {
     setWindowTitle("注册");
     setWindowModality(Qt::ApplicationModal);
     setWindowButtonFlags(ElaAppBarType::CloseButtonHint);
@@ -10,6 +15,7 @@ RegisterWindow::RegisterWindow(QWidget *parent): ElaWidget(parent) {
 }
 
 RegisterWindow::~RegisterWindow() {
+    delete http_;
 }
 
 void RegisterWindow::togglePasswordVisibility() {
@@ -35,8 +41,12 @@ void RegisterWindow::togglePasswordVisibility() {
 }
 
 void RegisterWindow::sendVerificationCode() {
-    // 发送http请求
-
+    QString email = emailEdit_->text();
+    if(email.isEmpty()) {
+        ElaMessageBar::error(ElaMessageBarType::Top, "错误", "请输入邮箱", 2000, this);
+        return;
+    }
+    // 设置定时器
     if (verifyButtonTimer_ == nullptr) {
         verifyButtonTimer_ = new QTimer(this);
         connect(verifyButtonTimer_, &QTimer::timeout, this, &RegisterWindow::onTimeout);
@@ -45,9 +55,58 @@ void RegisterWindow::sendVerificationCode() {
     verifyButtonInterval_ = 60;
     sendCodeButton_->setText(QString("%1s").arg(verifyButtonInterval_));
     verifyButtonTimer_->start(1000);
+    // 发送请求
+    QMap<QString, QString> query;
+    query["email"] = email;
+    auto resp = http_->getToUrl(QUrl(HTTP_PREFIX"/user/verify_code"), query);
+    if(!resp) {
+        LOG_WARN("c[RegisterWindow::sendVerificationCode] request failed, code:{}, err:{}", resp.statusCode(), resp.errorString().toStdString());
+        return;
+    }
+    if(!resp.data()) {
+        LOG_WARN("c[RegisterWindow::sendVerificationCode] request error, code:{}, msg:{}", resp.data().code(), resp.data().message().toStdString());
+    }
 }
 
 void RegisterWindow::signUp() {
+    QString name = usernameEdit_->text();
+    QString password = passwordEdit_->text();
+    QString passwordRe = passwordReEdit_->text();
+    QString email = emailEdit_->text();
+    QString verify = verificationCodeEdit_->text();
+    if (name.isEmpty() || password.isEmpty() || passwordRe.isEmpty() || email.isEmpty()) {
+        ElaMessageBar::error(ElaMessageBarType::Top, "错误", "请填写完整信息", 2000, this);
+        return;
+    }
+    if (password != passwordRe) {
+        ElaMessageBar::error(ElaMessageBarType::Top, "错误", "两次密码不一致", 2000, this);
+        return;
+    }
+    if(verify.isEmpty()) {
+        ElaMessageBar::error(ElaMessageBarType::Top, "错误", "请输入验证码", 2000, this);
+        return;
+    }
+
+    QJsonObject req;
+    req["name"] = name;
+    req["password"] = password;
+    req["email"] = email;
+    req["verification"] = verify;
+    req["gender"] = gender_;
+    auto resp = http_->postToUrl(QUrl(HTTP_PREFIX"/user/register"), QJsonDocument(req).toJson());
+    if(!resp) {
+        LOG_WARN("c[RegisterWindow::signUp] request failed, code:{}, err:{}", resp.statusCode(), resp.errorString().toStdString());
+        ElaMessageBar::error(ElaMessageBarType::Top, "错误", "注册失败", 2000, this);
+        return;
+    }
+    if(!resp.data()) {
+        LOG_WARN("c[RegisterWindow::signUp] request error, code:{}, msg:{}", resp.data().code(), resp.data().message().toStdString());
+        ElaMessageBar::error(ElaMessageBarType::Top, "错误", "注册失败", 2000, this);
+        return;
+    }
+    // TODO:优化展示
+    int id = resp.data().dataJson()["id"].toInt();
+    ElaMessageBar::success(ElaMessageBarType::Top, "注册成功", QString("用户ID：%1").arg(id), 5000, this);
 }
 
 void RegisterWindow::onTimeout() {
@@ -72,6 +131,36 @@ void RegisterWindow::initUI() {
             "ElaPushButton:hover {"
             "    background-color: #0056b3;"
             "}";
+    // 性别选择
+    QHBoxLayout *genderLayout = new QHBoxLayout();
+    ElaText *genderText = new ElaText("性别", 16, this);
+    unknowGenderRadio_ = new ElaRadioButton("未知", this);
+    unknowGenderRadio_->setChecked(true);
+    maleGenderRadio_ = new ElaRadioButton("男", this);
+    femaleGenderRadio_ = new ElaRadioButton("女", this);
+
+    connect(unknowGenderRadio_, &ElaRadioButton::toggled, [this](bool checked) {
+        if(checked) gender_ = 0;
+    });
+    connect(maleGenderRadio_, &ElaRadioButton::toggled, [this](bool checked) {
+        if(checked) gender_ = 1;
+    });
+    connect(femaleGenderRadio_, &ElaRadioButton::toggled, [this](bool checked) {
+        if(checked) gender_ = 2;
+    });
+
+    genderLayout->setSpacing(5);
+    genderLayout->addWidget(genderText);
+    genderLayout->addStretch();
+    genderLayout->addWidget(unknowGenderRadio_);
+    genderLayout->addWidget(maleGenderRadio_);
+    genderLayout->addWidget(femaleGenderRadio_);
+
+    QButtonGroup *genderGroup = new QButtonGroup(this);
+    genderGroup->addButton(unknowGenderRadio_);
+    genderGroup->addButton(maleGenderRadio_);
+    genderGroup->addButton(femaleGenderRadio_);
+    genderGroup->setExclusive(true);
 
     // 用户名输入框
     usernameEdit_ = new ElaLineEdit(this);
@@ -89,7 +178,7 @@ void RegisterWindow::initUI() {
     showPasswordButton_->setStyleSheet("QPushButton {"
         "    padding: 3px;"
         "}");
-    connect(showPasswordButton_, &QPushButton::clicked, this, &RegisterWindow::togglePasswordVisibility);
+    connect(showPasswordButton_, &ElaPushButton::clicked, this, &RegisterWindow::togglePasswordVisibility);
     passwordLayout->setSpacing(5);
     passwordLayout->addWidget(passwordEdit_);
     passwordLayout->addWidget(showPasswordButton_);
@@ -104,7 +193,7 @@ void RegisterWindow::initUI() {
     showPasswordReButton_->setStyleSheet("QPushButton {"
         "    padding: 3px;"
         "}");
-    connect(showPasswordReButton_, &QPushButton::clicked, this, &RegisterWindow::togglePasswordVisibility);
+    connect(showPasswordReButton_, &ElaPushButton::clicked, this, &RegisterWindow::togglePasswordVisibility);
     passwordReLayout->setSpacing(5);
     passwordReLayout->addWidget(passwordReEdit_);
     passwordReLayout->addWidget(showPasswordReButton_);
@@ -117,8 +206,8 @@ void RegisterWindow::initUI() {
 
     sendCodeButton_ = new ElaPushButton("发送验证码", this);
     sendCodeButton_->setStyleSheet(buttonStyle);
-    // sendCodeButton_->setFont(QFont("Microsoft YaHei", 10));
-    connect(sendCodeButton_, &QPushButton::clicked, this, &RegisterWindow::sendVerificationCode);
+
+    connect(sendCodeButton_, &ElaPushButton::clicked, this, &RegisterWindow::sendVerificationCode);
     emailLayout->setSpacing(5);
     emailLayout->addWidget(emailEdit_);
     emailLayout->addWidget(sendCodeButton_);
@@ -131,10 +220,11 @@ void RegisterWindow::initUI() {
     // 注册按钮
     registerButton_ = new ElaPushButton("注册", this);
     registerButton_->setStyleSheet(buttonStyle);
-    connect(registerButton_, &QPushButton::clicked, this, &RegisterWindow::signUp);
+    connect(registerButton_, &ElaPushButton::clicked, this, &RegisterWindow::signUp);
 
     // 主布局
     QVBoxLayout *mainLayout = new QVBoxLayout(this);
+    mainLayout->addLayout(genderLayout);
     mainLayout->addWidget(usernameEdit_);
     mainLayout->addLayout(passwordLayout);
     mainLayout->addLayout(passwordReLayout);
