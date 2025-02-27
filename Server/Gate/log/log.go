@@ -1,6 +1,7 @@
 package log
 
 import (
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"gopkg.in/natefinch/lumberjack.v2"
 	"log/slog"
@@ -16,11 +17,23 @@ import (
 var log *slog.Logger
 
 func Init() {
+	// 日志文件名
+	now := time.Now()
+	logFileName := fmt.Sprintf("%s.log", now.Format("2006-01-02"))
+	// 日志目录
+	logDir := "./log"
+	if _, err := os.Stat(logDir); os.IsNotExist(err) {
+		if err := os.Mkdir(logDir, 0755); err != nil {
+			fmt.Println("Failed to create log directory:", err)
+			return
+		}
+	}
+
 	lumberjackLogger := &lumberjack.Logger{
-		Filename:   "./server.log",
-		MaxSize:    10,
-		MaxBackups: 2,
-		MaxAge:     28,
+		Filename:   fmt.Sprintf("%s/%s", logDir, logFileName),
+		MaxSize:    100,
+		MaxBackups: 30,
+		MaxAge:     30,
 		Compress:   true,
 	}
 	log = slog.New(slog.NewJSONHandler(lumberjackLogger, &slog.HandlerOptions{Level: slog.LevelInfo}))
@@ -33,7 +46,7 @@ func L() *slog.Logger {
 func Error(err error) slog.Attr {
 	return slog.Any("error", err)
 }
-
+func Int(k string, v int) slog.Attr { return slog.Int(k, v) }
 func GinLogger() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		start := time.Now()
