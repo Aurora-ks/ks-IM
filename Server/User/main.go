@@ -59,11 +59,11 @@ func main() {
 		Handler: r,
 	}
 	go func() {
+		log.L().Info("Server Start", log.Int("port", settings.Conf.ServerConfig.Port))
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			log.L().Error("Server Listen", log.Error(err))
 			return
 		}
-		log.L().Info("Server Start", log.Int("port", settings.Conf.ServerConfig.Port))
 	}()
 
 	quit := make(chan os.Signal, 1)
