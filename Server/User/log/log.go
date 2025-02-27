@@ -2,6 +2,7 @@ package log
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"net"
 	"net/http"
@@ -44,12 +45,23 @@ func (h *customHandler) WithGroup(name string) slog.Handler {
 }
 
 func Init() {
-	// TODO: use config to load
+	// 日志文件名
+	now := time.Now()
+	logFileName := fmt.Sprintf("%s.log", now.Format("2006-01-02"))
+	// 日志目录
+	logDir := "./log"
+	if _, err := os.Stat(logDir); os.IsNotExist(err) {
+		if err := os.Mkdir(logDir, 0755); err != nil {
+			fmt.Println("Failed to create log directory:", err)
+			return
+		}
+	}
+
 	lumberjackLogger := &lumberjack.Logger{
-		Filename:   "./ServerUser.log",
-		MaxSize:    10,
-		MaxBackups: 2,
-		MaxAge:     28,
+		Filename:   fmt.Sprintf("%s/%s", logDir, logFileName),
+		MaxSize:    100,
+		MaxBackups: 30,
+		MaxAge:     30,
 		Compress:   true,
 	}
 	jsonHandler := slog.NewJSONHandler(lumberjackLogger, &slog.HandlerOptions{Level: slog.LevelInfo})

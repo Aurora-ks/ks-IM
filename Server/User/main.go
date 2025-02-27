@@ -63,6 +63,7 @@ func main() {
 			log.L().Error("Server Listen", log.Error(err))
 			return
 		}
+		log.L().Info("Server Start", log.Int("port", settings.Conf.ServerConfig.Port))
 	}()
 
 	quit := make(chan os.Signal, 1)
