@@ -18,6 +18,9 @@ public:
     void bindUser(const QString &uid);
     void updateUserInfo();
 
+    Net* http() { return http_; }
+    Net* ws() { return ws_; }
+
 private:
     UserPage *userPage_{nullptr};
     SettingPage *settingPage_{nullptr};

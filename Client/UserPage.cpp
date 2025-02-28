@@ -1,9 +1,13 @@
 #include "UserPage.h"
+
+#include <net.h>
 #include <QBoxLayout>
 #include <QButtonGroup>
+#include <QJsonObject>
 #include <Ela/ElaText.h>
 #include <Ela/ElaRadioButton.h>
 #include <Ela/ElaLineEdit.h>
+#include <Ela/ElaMessageBar.h>
 #include <Ela/ElaPushButton.h>
 #include "MainWindow.h"
 #include "logger.h"
@@ -54,6 +58,15 @@ void UserPage::initLayout() {
     radioGroup->addButton(maleGender_);
     radioGroup->addButton(femaleGender_);
     radioGroup->setExclusive(true);
+    connect(radioGroup, &QButtonGroup::buttonClicked, this, [this](QAbstractButton *button) {
+        if(button == unkonwGender_) {
+            gender_ = 0;
+        } else if(button == maleGender_) {
+            gender_ = 1;
+        } else if(button == femaleGender_) {
+            gender_ = 2;
+        }
+    });
 
     // username
     QHBoxLayout *usernameLayout = new QHBoxLayout();
@@ -103,7 +116,35 @@ void UserPage::initLayout() {
     });
     connect(saveButton_, &ElaPushButton::clicked, this, [this]() {
         LOG_INFO("c[UserPage::saveButton] send user info modify request");
-        //TODO: send request
+        QString name = userName_->text();
+        QString email = userEmail_->text();
+        QString phone = userPhone_->text();
+        if(name.isEmpty() || email.isEmpty() || phone.isEmpty()) {
+            ElaMessageBar::error(ElaMessageBarType::Top, "错误", "请填写完整信息", 2000, this);
+            return;
+        }
+        QString uid = window_->getUser()->getUserID();
+        QJsonObject json;
+        json["id"] = uid.toInt();
+        json["name"] = name;
+        json["email"] = email;
+        json["phone"] = phone;
+        json["gender"] = gender_;
+        json["icon"] = "";
+        auto resp = window_->http()->postToUrl(QUrl(HTTP_PREFIX"/user/modify"), QJsonDocument(json).toJson());
+        if(!resp) {
+            LOG_WARN("c[UserPage] send user info modify request failed, code:{}, err:{}", resp.statusCode(), resp.errorString().toStdString());
+            ElaMessageBar::error(ElaMessageBarType::Top, "错误", "网络错误", 2000, this);
+            return;
+        }
+        auto respJson = resp.data();
+        if(!respJson) {
+            LOG_WARN("c[UserPage] send user info modify request error, code:{}, msg:{}", respJson.code(), respJson.message().toStdString());
+            ElaMessageBar::error(ElaMessageBarType::Top, "错误", "修改失败", 2000, this);
+            return;
+        }
+        window_->bindUser(uid);
+        updateInfo();
     });
 
     // 整体布局
@@ -125,7 +166,6 @@ void UserPage::initLayout() {
     mainLayout->addLayout(buttonLayout);
     mainLayout->addStretch();
     addCentralWidget(centralWidget, true, true, 0);
-    // setCustomWidget(customWidget);
 }
 
 void UserPage::updateInfo() {
@@ -142,5 +182,4 @@ void UserPage::updateInfo() {
     } else {
         unkonwGender_->setChecked(true);
     }
-    // update();
 }
