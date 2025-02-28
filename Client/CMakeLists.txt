@@ -36,6 +36,8 @@ add_executable(Client
         MainWindow.cpp
         include/MainWindow.h
         user.cpp
+        UserPage.cpp
+        SettingPage.cpp
 )
 
 target_link_libraries(Client

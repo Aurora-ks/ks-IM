@@ -2,22 +2,34 @@
 #include <Ela/ElaMessageBar.h>
 #include "MainWindow.h"
 #include "logger.h"
+#include "net.h"
+#include "user.h"
+#include "UserPage.h"
+#include "SettingPage.h"
 
-MainWindow::MainWindow(QWidget *parent)
+MainWindow::MainWindow(const QString &uid, QWidget *parent)
     : ElaWindow(parent),
-      http_(NetType::HTTP),
-      ws_(NetType::WS) {
+      http_(new Net(NetType::HTTP)),
+      ws_(new Net(NetType::WS)),
+      user_(new User()){
+    setWindowTitle("ks-im");
+    setWindowIcon(QIcon(":/images/resource/pic/Cirno.png"));
     setNavigationBarDisplayMode(ElaNavigationType::Compact);
+    bindUser(uid);
+    initContent();
 }
 
 MainWindow::~MainWindow() {
-    ws_.disconnect();
+    ws_->disconnect();
+    delete http_;
+    delete ws_;
+    delete user_;
 }
 
 void MainWindow::bindUser(const QString &uid) {
     QMap<QString, QString> query;
     query["id"] = uid;
-    auto resp = http_.getToUrl(QUrl(HTTP_PREFIX"/user"), query);
+    auto resp = http_->getToUrl(QUrl(HTTP_PREFIX"/user"), query);
     LOG_INFO("u[{}] c[MainWindow::BindUser] send get user info request", uid.toStdString());
 
     if(!resp) {
@@ -33,18 +45,29 @@ void MainWindow::bindUser(const QString &uid) {
         return;
     }
     QJsonObject usr = data.dataJson();
-    user_.setUserID(QString::number(usr["id"].toInt()));
-    user_.setUserName(usr["name"].toString());
-    user_.setGender(static_cast<User::Gender>(usr["gender"].toInt()));
-    user_.setEmail(usr["email"].toString());
-    user_.setPhone(usr["phone"].toString());
-    user_.setAvatarFromB64(usr["avatar"].toString());
+    user_->setUserID(QString::number(usr["id"].toInt()));
+    user_->setUserName(usr["name"].toString());
+    user_->setGender(static_cast<User::Gender>(usr["gender"].toInt()));
+    user_->setEmail(usr["email"].toString());
+    user_->setPhone(usr["phone"].toString());
+    // TODO: 读取图片
+    // user_->setAvatarFromB64(usr["avatar"].toString());
+    user_->setAvatar(QPixmap(":/images/resource/pic/Avatar.png"));
+    updateUserInfo();
 }
 
 void MainWindow::updateUserInfo() {
-    // TODO: 读取图片
-    setUserInfoCardPixmap(QPixmap(":/images/resource/pic/Avatar.png"));
-    setUserInfoCardTitle(user_.getUserName());
-    setUserInfoCardSubTitle(user_.getUserID());
-    update();
+    setUserInfoCardPixmap(user_->getAvatar());
+    setUserInfoCardTitle(user_->getUserName());
+    setUserInfoCardSubTitle(user_->getUserID());
+}
+
+void MainWindow::initContent() {
+    userPage_ = new UserPage(this);
+    settingPage_ = new SettingPage(this);
+    addFooterNode("User", userPage_, userKey_, 0, ElaIconType::User);
+    addFooterNode("Setting", settingPage_, settingKey_, 0, ElaIconType::GearComplex);
+    connect(this, &MainWindow::userInfoCardClicked, this, [this]() {
+        this->navigation(userKey_);
+    });
 }

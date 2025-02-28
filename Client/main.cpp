@@ -56,18 +56,17 @@ int main(int argc, char *argv[]) {
     });
 
     LoginWindow *w = new LoginWindow();
-    MainWindow mw;
+    MainWindow *mw = nullptr;
     QObject::connect(w, &LoginWindow::loginSuccess, [&](const QString &uid) {
         LOG_INFO("u[{}] show main window", uid.toStdString());
-        mw.bindUser(uid);
-        mw.updateUserInfo();
-        mw.moveToCenter();
-        mw.show();
+        mw = new MainWindow(uid);
+        mw->moveToCenter();
+        mw->show();
         w->close();
         w->deleteLater();
     });
     QObject::connect(w, &LoginWindow::destroyed, [&]() {
-        if(!mw.isVisible()) a.quit();
+        if(mw && !mw->isVisible()) a.quit();
     });
 
     w->moveToCenter();

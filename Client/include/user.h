@@ -1,7 +1,7 @@
 #ifndef USER_H
 #define USER_H
 
-#include <QImage>
+#include <QPixmap>
 #include "afx.h"
 
 class User {
@@ -14,7 +14,7 @@ public:
     MEM_CREATE_D(QString, UserID)
     MEM_CREATE_D(QString, UserName)
     MEM_CREATE_D(Gender, Gender)
-    MEM_CREATE_D(QImage, Avatar)
+    MEM_CREATE_D(QPixmap, Avatar)
     MEM_CREATE_D(QString, Email)
     MEM_CREATE_D(QString, Phone)
 

@@ -10,6 +10,7 @@
 #include "net.h"
 #include "setting.h"
 
+// config key or table
 const QString skAutoLogin = "AutoLogin";
 const QString skLastLoginAccount = "LastLoginAccount";
 const QString skRememberPassword = "RememberPassword";
@@ -17,6 +18,7 @@ const QString stAccounts = "Accounts";
 
 LoginWindow::LoginWindow(QWidget *parent): ElaWidget(parent) {
     setWindowTitle("登录");
+    setWindowIcon(QIcon(":/images/resource/pic/Cirno.png"));
     setWindowButtonFlags(ElaAppBarType::CloseButtonHint | ElaAppBarType::MinimizeButtonHint);
     initUI();
     connect(autoLoginCheckBox_, &ElaCheckBox::clicked, [this](bool checked) {

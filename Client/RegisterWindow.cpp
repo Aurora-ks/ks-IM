@@ -9,6 +9,7 @@
 
 RegisterWindow::RegisterWindow(QWidget *parent): ElaWidget(parent), http_(new Net(NetType::HTTP)) {
     setWindowTitle("注册");
+    setWindowIcon(QIcon(":/images/resource/pic/Cirno.png"));
     setWindowModality(Qt::ApplicationModal);
     setWindowButtonFlags(ElaAppBarType::CloseButtonHint);
     initUI();

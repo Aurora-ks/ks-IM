@@ -8,7 +8,7 @@
 #include <QJsonArray>
 #include <functional>
 
-#define  RELEASE_MOD 0
+#define  RELEASE_MOD 1
 #if RELEASE_MOD
 #define HTTP_PREFIX "http://139.199.221.81"
 #else

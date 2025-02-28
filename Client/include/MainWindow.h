@@ -2,22 +2,32 @@
 #define MAINWINDOW_H
 
 #include <Ela/ElaWindow.h>
-#include "net.h"
-#include "user.h"
+
+class Net;
+class User;
+class UserPage;
+class SettingPage;
 
 class MainWindow :public ElaWindow{
     Q_OBJECT
 public:
-    explicit MainWindow(QWidget *parent = nullptr);
+    explicit MainWindow(const QString &uid, QWidget *parent = nullptr);
     ~MainWindow();
 
+    User* getUser() const { return user_; }
     void bindUser(const QString &uid);
     void updateUserInfo();
 
 private:
-    Net http_;
-    Net ws_;
-    User user_;
+    UserPage *userPage_{nullptr};
+    SettingPage *settingPage_{nullptr};
+    QString settingKey_{};
+    QString userKey_{};
+    Net *http_{nullptr};
+    Net *ws_{nullptr};
+    User *user_{nullptr};
+
+    void initContent();
 };
 
 
