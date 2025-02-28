@@ -127,6 +127,7 @@ func ModifyUserInfo(c *gin.Context) {
 		c.JSON(http.StatusOK, Res(ec.DBModify, "User Modify Info Failed"))
 		log.L().Error("User Modify Info Failed", log.Error(err))
 	}
+	c.JSON(http.StatusOK, OK())
 }
 
 // GetIcon 获取头像
