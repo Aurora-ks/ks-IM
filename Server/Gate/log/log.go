@@ -32,8 +32,8 @@ func Init() {
 	lumberjackLogger := &lumberjack.Logger{
 		Filename:   fmt.Sprintf("%s/%s", logDir, logFileName),
 		MaxSize:    100,
-		MaxBackups: 30,
-		MaxAge:     30,
+		MaxBackups: 10,
+		MaxAge:     1,
 		Compress:   true,
 	}
 	log = slog.New(slog.NewJSONHandler(lumberjackLogger, &slog.HandlerOptions{Level: slog.LevelInfo}))
