@@ -6,6 +6,7 @@
 #include "user.h"
 #include "UserPage.h"
 #include "SettingPage.h"
+#include "RelationPage.h"
 
 MainWindow::MainWindow(const QString &uid, QWidget *parent)
     : ElaWindow(parent),
@@ -33,7 +34,7 @@ void MainWindow::bindUser(const QString &uid) {
     LOG_INFO("u[{}] c[MainWindow::BindUser] send get user info request", uid.toStdString());
 
     if(!resp) {
-        LOG_ERROR("[u{}] c[MainWindow::BindUser] get user info failed", uid.toStdString());
+        LOG_ERROR("u[{}] c[MainWindow::BindUser] get user info failed", uid.toStdString());
         ElaMessageBar::error(ElaMessageBarType::Top, "错误", "获取用户信息失败", 2000, this);
         return;
     }
@@ -63,8 +64,10 @@ void MainWindow::updateUserInfo() {
 }
 
 void MainWindow::initContent() {
+    relationPage_ = new RelationPage(this);
     userPage_ = new UserPage(this);
     settingPage_ = new SettingPage(this);
+    addPageNode("Relation", relationPage_, ElaIconType::CircleUser);
     addFooterNode("User", userPage_, userKey_, 0, ElaIconType::User);
     addFooterNode("Setting", settingPage_, settingKey_, 0, ElaIconType::GearComplex);
     connect(this, &MainWindow::userInfoCardClicked, this, [this]() {

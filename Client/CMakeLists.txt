@@ -38,6 +38,10 @@ add_executable(Client
         user.cpp
         UserPage.cpp
         SettingPage.cpp
+        RelationPage.cpp
+        include/RelationPage.h
+        RelationNotifyWidget.cpp
+        include/RelationNotifyWidget.h
 )
 
 target_link_libraries(Client

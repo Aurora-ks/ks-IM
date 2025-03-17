@@ -7,6 +7,7 @@ class Net;
 class User;
 class UserPage;
 class SettingPage;
+class RelationPage;
 
 class MainWindow :public ElaWindow{
     Q_OBJECT
@@ -22,6 +23,7 @@ public:
     Net* ws() { return ws_; }
 
 private:
+    RelationPage *relationPage_{nullptr};
     UserPage *userPage_{nullptr};
     SettingPage *settingPage_{nullptr};
     QString settingKey_{};

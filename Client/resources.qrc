@@ -2,5 +2,9 @@
     <qresource prefix="/images">
         <file>resource/pic/Avatar.png</file>
         <file>resource/pic/Cirno.png</file>
+        <file>resource/pic/User.png</file>
+        <file>resource/pic/User-Blue.png</file>
+        <file>resource/pic/UserGroup.png</file>
+        <file>resource/pic/UserGroup-Blue.png</file>
     </qresource>
 </RCC>

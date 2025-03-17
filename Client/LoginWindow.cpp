@@ -160,9 +160,7 @@ void LoginWindow::initUI() {
     registerButton_ = new ElaPushButton("注册", this);
     loginButton_ = new ElaPushButton("登录", this);
     // 按钮的样式表
-    QString buttonStyle = "ElaPushButton:hover {"
-            "    background-color: #0056b3;"
-            "}";
+    QString buttonStyle = "ElaPushButton:hover {background-color: #f1f3f5;}";
     registerButton_->setStyleSheet(buttonStyle);
     loginButton_->setStyleSheet(buttonStyle);
     connect(registerButton_, &ElaPushButton::clicked, this, &LoginWindow::signUp);

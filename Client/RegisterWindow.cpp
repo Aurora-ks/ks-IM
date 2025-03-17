@@ -130,7 +130,7 @@ void RegisterWindow::initUI() {
             " font-size: 13px;"
             "}"
             "ElaPushButton:hover {"
-            "    background-color: #0056b3;"
+            "    background-color: #f1f3f5;"
             "}";
     // 性别选择
     QHBoxLayout *genderLayout = new QHBoxLayout();

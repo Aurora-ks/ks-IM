@@ -106,9 +106,7 @@ void UserPage::initLayout() {
     buttonLayout->addWidget(saveButton_);
     buttonLayout->addStretch();
     // 按钮的样式表
-    QString buttonStyle = "ElaPushButton:hover {"
-            "    background-color: #0056b3;"
-            "}";
+    QString buttonStyle = "ElaPushButton:hover {background-color: #f1f3f5;}";
     resetButton_->setStyleSheet(buttonStyle);
     saveButton_->setStyleSheet(buttonStyle);
     connect(resetButton_, &ElaPushButton::clicked, this, [this]() {
@@ -170,7 +168,7 @@ void UserPage::initLayout() {
 
 void UserPage::updateInfo() {
     User *user = window_->getUser();
-    avatar_->setPixmap(user->getAvatar().scaled(100, 100, Qt::KeepAspectRatio));
+    avatar_->setPixmap(user->getAvatar().scaled(100, 100, Qt::KeepAspectRatio, Qt::SmoothTransformation));
     userID_->setText(QString("UID:%1").arg(user->getUserID()));
     userName_->setText(user->getUserName());
     userEmail_->setText(user->getEmail());
