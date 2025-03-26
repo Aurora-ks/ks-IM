@@ -156,7 +156,7 @@ func GetUser(id int) (user *model.User, err error) {
 // GetFriendship 获取好友关系
 // status = 0 待处理, 1 已通过, 2 已拒绝, 3 已拉黑
 func GetFriendship(id, status int) (friendList []*model.Relationship, err error) {
-	stm := "SELECT id, user_id, friend_id, status, remark, group_id, alias FROM friend_relationships WHERE user_id = ? AND status = ?"
+	stm := "SELECT id, user_id, friend_id, status, IFNULL(remark, ''), group_id, IFNULL(alias, '') FROM friend_relationships WHERE user_id = ? AND status = ?"
 	rows, err := db.Query(stm, id, status)
 	if err != nil {
 		return
@@ -187,6 +187,24 @@ func AddFriend(userId, friendId int, remark string) (id int64, err error) {
 func RespNewFriend(id int, option int) (err error) {
 	stm := "UPDATE friend_relationships SET status = ? WHERE id = ?"
 	_, err = db.Exec(stm, option, id)
+	return
+}
+
+// GetRelGrouping 获取好友分组
+func GetRelGrouping(userId int) (groupList []*model.RelGrouping, err error) {
+	stm := "SELECT id, user_id, group_name FROM friend_groups WHERE user_id = ?"
+	rows, err := db.Query(stm, userId)
+	if err != nil {
+		return
+	}
+	defer rows.Close()
+	for rows.Next() {
+		rel := new(model.RelGrouping)
+		if err = rows.Scan(&rel.Id, &rel.UserID, &rel.Name); err != nil {
+			return
+		}
+		groupList = append(groupList, rel)
+	}
 	return
 }
 

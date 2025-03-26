@@ -23,6 +23,30 @@ const (
 	RelStatusBlock  = 3
 )
 
+// GetFriendGrouping 获取好友分组
+func GetFriendGrouping(c *gin.Context) {
+	id := c.Query("uid")
+	uid, err := strconv.Atoi(id)
+	if err != nil {
+		c.JSON(http.StatusOK, Res(ec.ParmsInvalid, "User Id Parse Failed"))
+		log.L().Error("User Id Parse Failed", log.Error(err))
+		return
+	}
+	list, err := mysql.GetRelGrouping(uid)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		log.L().Error("DB Get Friend Grouping", log.Error(err))
+		c.JSON(http.StatusOK, Res(ec.DBQuery, "DB Get Friend Grouping"))
+		return
+	}
+	data, err := json.Marshal(list)
+	if err != nil {
+		log.L().Error("Relationship Data Marshal", log.Error(err))
+		c.JSON(http.StatusOK, Res(ec.JsonMarshal, "Relationship Data Marshal Failed"))
+		return
+	}
+	c.JSON(http.StatusOK, OK(data))
+}
+
 // GetFriendships 获取用户的好友列表
 func GetFriendships(c *gin.Context) {
 	id := c.Query("uid")

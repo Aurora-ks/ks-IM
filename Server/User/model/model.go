@@ -25,6 +25,11 @@ type Relationship struct {
 	GroupID  int    `json:"group_id"`
 	Alias    string `json:"alias"`
 }
+type RelGrouping struct {
+	Id     int    `json:"id"`
+	UserID int    `json:"user_id"`
+	Name   string `json:"name"`
+}
 type Group struct {
 	Id          int    `json:"id"`
 	Name        string `json:"name"`
