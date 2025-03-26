@@ -49,6 +49,85 @@ func SetUp() *gin.Engine {
 		forwardRequest(context, "user")
 	})
 
+	rel := r.Group("/rel")
+	// 获取好友列表
+	rel.GET("/friend-list", func(context *gin.Context) {
+		forwardRequest(context, "user")
+	})
+	// 获取好友分组
+	rel.GET("/friend_grouping", func(context *gin.Context) {
+		forwardRequest(context, "user")
+	})
+	// 获取好友申请
+	rel.GET("/friend-requests", func(context *gin.Context) {
+		forwardRequest(context, "user")
+	})
+	// 添加好友
+	rel.POST("/add-friend", func(context *gin.Context) {
+		forwardRequest(context, "user")
+	})
+	// 响应好友申请
+	rel.POST("/resp-new-friend", func(context *gin.Context) {
+		forwardRequest(context, "user")
+	})
+	// 添加好友分组
+	rel.POST("/add-group", func(context *gin.Context) {
+		forwardRequest(context, "user")
+	})
+	// 修改好友分组名
+	rel.POST("/modify-group", func(context *gin.Context) {
+		forwardRequest(context, "user")
+	})
+	// 修改好友分组
+	rel.POST("/modify-friend-group", func(context *gin.Context) {
+		forwardRequest(context, "user")
+	})
+	// 修改好友备注
+	rel.POST("/modify-friend-alias", func(context *gin.Context) {
+		forwardRequest(context, "user")
+	})
+
+	grp := r.Group("/grp")
+	// 获取群组信息
+	grp.GET("/info", func(context *gin.Context) {
+		forwardRequest(context, "user")
+	})
+	// 获取用户加入的群组
+	grp.GET("/list", func(context *gin.Context) {
+		forwardRequest(context, "user")
+	})
+	// 删除群组
+	grp.POST("/del", func(context *gin.Context) {
+		forwardRequest(context, "user")
+	})
+	// 创建群组
+	grp.POST("/new", func(context *gin.Context) {
+		forwardRequest(context, "user")
+	})
+	// 申请入群
+	grp.POST("/apply", func(context *gin.Context) {
+		forwardRequest(context, "user")
+	})
+	// 获取群组申请列表
+	grp.GET("/apply-list", func(context *gin.Context) {
+		forwardRequest(context, "user")
+	})
+	// 群组申请处理
+	grp.POST("/apply-deal", func(context *gin.Context) {
+		forwardRequest(context, "user")
+	})
+	// 获取群组成员
+	grp.GET("/members", func(context *gin.Context) {
+		forwardRequest(context, "user")
+	})
+	// 退出群组
+	grp.POST("/quit", func(context *gin.Context) {
+		forwardRequest(context, "user")
+	})
+	// 修改群成员权限
+	grp.POST("/member-role", func(context *gin.Context) {
+		forwardRequest(context, "user")
+	})
 	return r
 }
 
