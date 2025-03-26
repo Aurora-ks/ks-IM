@@ -156,7 +156,7 @@ func GetUser(id int) (user *model.User, err error) {
 // GetFriendship 获取好友关系
 // status = 0 待处理, 1 已通过, 2 已拒绝, 3 已拉黑
 func GetFriendship(id, status int) (friendList []*model.Relationship, err error) {
-	stm := "SELECT id, user_id, friend_id, status, IFNULL(remark, ''), group_id, IFNULL(alias, '') FROM friend_relationships WHERE user_id = ? AND status = ?"
+	stm := "SELECT a.id, a.user_id, a.friend_id, IFNULL( a.remark, '' ), a.group_id, IFNULL( a.alias, '' ), b.NAME, b.gender, b.email, b.phone, b.icon FROM friend_relationships a JOIN `user` b ON a.friend_id = b.id WHERE a.user_id = ? AND a.STATUS = ?;"
 	rows, err := db.Query(stm, id, status)
 	if err != nil {
 		return
@@ -164,9 +164,10 @@ func GetFriendship(id, status int) (friendList []*model.Relationship, err error)
 	defer rows.Close()
 	for rows.Next() {
 		rel := new(model.Relationship)
-		if err = rows.Scan(&rel.Id, &rel.UserID, &rel.FriendID, &rel.Status, &rel.Remark, &rel.GroupID, &rel.Alias); err != nil {
+		if err = rows.Scan(&rel.Id, &rel.UserID, &rel.FriendID, &rel.Remark, &rel.GroupID, &rel.Alias, &rel.UserInfo.Name, &rel.UserInfo.Gender, &rel.UserInfo.Email, &rel.UserInfo.Phone, &rel.UserInfo.Icon); err != nil {
 			return
 		}
+		rel.UserInfo.Id = rel.FriendID
 		friendList = append(friendList, rel)
 	}
 	return
