@@ -8,7 +8,7 @@
 #include "SettingPage.h"
 #include "RelationPage.h"
 
-MainWindow::MainWindow(const QString &uid, QWidget *parent)
+MainWindow::MainWindow(int64_t uid, QWidget *parent)
     : ElaWindow(parent),
       http_(new Net(NetType::HTTP)),
       ws_(new Net(NetType::WS)),
@@ -27,14 +27,14 @@ MainWindow::~MainWindow() {
     delete user_;
 }
 
-void MainWindow::bindUser(const QString &uid) {
+void MainWindow::bindUser(int64_t uid) {
     QMap<QString, QString> query;
-    query["id"] = uid;
+    query["id"] = QString::number(uid);
     auto resp = http_->getToUrl(QUrl(HTTP_PREFIX"/user"), query);
-    LOG_INFO("u[{}] c[MainWindow::BindUser] send get user info request", uid.toStdString());
+    LOG_INFO("u[{}] c[MainWindow::BindUser] send get user info request", uid);
 
     if(!resp) {
-        LOG_ERROR("u[{}] c[MainWindow::BindUser] get user info failed", uid.toStdString());
+        LOG_ERROR("u[{}] c[MainWindow::BindUser] get user info failed", uid);
         ElaMessageBar::error(ElaMessageBarType::Top, "错误", "获取用户信息失败", 2000, this);
         return;
     }
@@ -46,7 +46,7 @@ void MainWindow::bindUser(const QString &uid) {
         return;
     }
     QJsonObject usr = data.dataJson();
-    user_->setUserID(QString::number(usr["id"].toInt()));
+    user_->setUserID(usr["id"].toInteger());
     user_->setUserName(usr["name"].toString());
     user_->setGender(static_cast<User::Gender>(usr["gender"].toInt()));
     user_->setEmail(usr["email"].toString());
@@ -60,7 +60,7 @@ void MainWindow::bindUser(const QString &uid) {
 void MainWindow::updateUserInfo() {
     setUserInfoCardPixmap(user_->getAvatar());
     setUserInfoCardTitle(user_->getUserName());
-    setUserInfoCardSubTitle(user_->getUserID());
+    setUserInfoCardSubTitle(user_->UserIDToString());
 }
 
 void MainWindow::initContent() {

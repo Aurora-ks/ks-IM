@@ -12,11 +12,11 @@ class RelationPage;
 class MainWindow :public ElaWindow{
     Q_OBJECT
 public:
-    explicit MainWindow(const QString &uid, QWidget *parent = nullptr);
+    explicit MainWindow(int64_t uid, QWidget *parent = nullptr);
     ~MainWindow();
 
     User* getUser() const { return user_; }
-    void bindUser(const QString &uid);
+    void bindUser(int64_t uid);
     void updateUserInfo();
 
     Net* http() { return http_; }

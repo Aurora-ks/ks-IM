@@ -12,7 +12,6 @@ class ElaPushButton;
 class UserPage : public ElaScrollPage{
 public:
     UserPage(QWidget *parent = nullptr);
-    ~UserPage();
 
 private:
     QLabel *avatar_{nullptr};

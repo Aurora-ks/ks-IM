@@ -90,7 +90,7 @@ void LoginWindow::login() {
     }
     QJsonObject user = resJson.dataJson();
     storeConf();
-    emit loginSuccess(QString::number(user["id"].toInt()));
+    emit loginSuccess(user["id"].toInteger());
 }
 
 void LoginWindow::signUp() {

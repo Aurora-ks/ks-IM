@@ -42,6 +42,12 @@ add_executable(Client
         include/RelationPage.h
         RelationNotifyWidget.cpp
         include/RelationNotifyWidget.h
+        model/FriendListModel.cpp
+        include/FriendListModel.h
+        UserInfoCard.cpp
+        include/UserInfoCard.h
+        model/FriendTreeViewItem.cpp
+        include/FriendTreeViewItem.h
 )
 
 target_link_libraries(Client

@@ -33,7 +33,7 @@ Net::Net(NetType type, const QUrl &url, bool sendJson, bool receiveJson) {
             QObject::connect(ws_, &QWebSocket::connected, [this] {
                 if (wsConnectedCallback_) wsConnectedCallback_();
             });
-            QObject::connect(ws_, QWebSocket::disconnected, [this]() {
+            QObject::connect(ws_, &QWebSocket::disconnected, [this]() {
                 if (wsDisconnectedCallback_) wsDisconnectedCallback_();
             });
             QObject::connect(ws_, &QWebSocket::binaryMessageReceived, [this](const QByteArray &data) {

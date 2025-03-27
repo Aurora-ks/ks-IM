@@ -56,6 +56,7 @@ public:
     int statusCode() const { return statusCode_; }
     QString errorString() const { return errorString_; }
     HttpJson data() const { return json_; }
+    QByteArray dataByte() const { return dataByte_; }
 private:
     bool success_;
     int statusCode_;
@@ -121,6 +122,13 @@ public:
     void sendWsBinary(const QByteArray &data);
 
     void sendWsText(const QString &message);
+
+    static HttpResponse GetTo(const QString &url, const QMap<QString, QString> &query = QMap<QString, QString>()) {
+        return Net(NetType::HTTP, QUrl(HTTP_PREFIX+url)).get(query);
+    }
+    static HttpResponse PostTo(const QString &url, const QByteArray &body = QByteArray()){
+        return Net(NetType::HTTP, QUrl(HTTP_PREFIX+url)).post(body);
+    }
 
 private:
     QNetworkAccessManager *http_{nullptr};

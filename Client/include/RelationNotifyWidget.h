@@ -12,7 +12,7 @@ class RelationNotifyWidget : public QWidget{
     Q_OBJECT
 public:
     explicit RelationNotifyWidget(QString title, QWidget *parent = nullptr);
-    ~RelationNotifyWidget();
+    ~RelationNotifyWidget() = default;
 
 private:
     ElaText *title_;

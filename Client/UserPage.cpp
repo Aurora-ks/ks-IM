@@ -22,10 +22,6 @@ UserPage::UserPage(QWidget *parent): ElaScrollPage(parent) {
     updateInfo();
 }
 
-UserPage::~UserPage() {
-    delete avatar_;
-}
-
 void UserPage::initLayout() {
     //avatar and id
     QHBoxLayout *firstRowLayout = new QHBoxLayout();
@@ -121,9 +117,10 @@ void UserPage::initLayout() {
             ElaMessageBar::error(ElaMessageBarType::Top, "错误", "请填写完整信息", 2000, this);
             return;
         }
-        QString uid = window_->getUser()->getUserID();
+
+        int64_t uid = window_->getUser()->getUserID();
         QJsonObject json;
-        json["id"] = uid.toInt();
+        json["id"] = uid;
         json["name"] = name;
         json["email"] = email;
         json["phone"] = phone;

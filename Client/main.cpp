@@ -3,6 +3,7 @@
 #include "LoginWindow.h"
 #include "MainWindow.h"
 #include "logger.h"
+#include "user.h"
 #define DEBUG 1
 // Qt消息处理器（将Qt日志转发到spdlog）
 void qtMessageHandler(QtMsgType type,
@@ -57,8 +58,9 @@ int main(int argc, char *argv[]) {
 
     LoginWindow *w = new LoginWindow();
     MainWindow *mw = nullptr;
-    QObject::connect(w, &LoginWindow::loginSuccess, [&](const QString &uid) {
-        LOG_INFO("u[{}] show main window", uid.toStdString());
+    QObject::connect(w, &LoginWindow::loginSuccess, [&](int64_t uid) {
+        LOG_INFO("u[{}] show main window", uid);
+        User::SetUid(uid);
         mw = new MainWindow(uid);
         mw->moveToCenter();
         mw->show();
