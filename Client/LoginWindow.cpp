@@ -21,6 +21,7 @@ LoginWindow::LoginWindow(QWidget *parent): ElaWidget(parent) {
     setWindowIcon(QIcon(":/images/resource/pic/Cirno.png"));
     setWindowButtonFlags(ElaAppBarType::CloseButtonHint | ElaAppBarType::MinimizeButtonHint);
     initUI();
+    connect(passwordVisibilityButton_, &ElaIconButton::clicked, this, &LoginWindow::togglePasswordVisibility);
     connect(autoLoginCheckBox_, &ElaCheckBox::clicked, [this](bool checked) {
         autoLogin_ = checked;
         if(checked) rememberPasswordCheckBox_->setChecked(true);
@@ -31,6 +32,9 @@ LoginWindow::LoginWindow(QWidget *parent): ElaWidget(parent) {
     connect(usernameEdit_, QOverload<const QString&>::of(&ElaComboBox::currentTextChanged), [this](const QString& text) {
         passwordEdit_->setText(accountList_.value(text));
     });
+    connect(registerButton_, &ElaPushButton::clicked, this, &LoginWindow::signUp);
+    connect(loginButton_, &ElaPushButton::clicked, this, &LoginWindow::login);
+
     usernameEdit_->installEventFilter(this);
     passwordEdit_->installEventFilter(this);
     autoLoginCheckBox_->installEventFilter(this);
@@ -140,7 +144,6 @@ void LoginWindow::initUI() {
     passwordVisibilityButton_->setStyleSheet("ElaIconButton {"
         "    padding: 3px;"
         "}");
-    connect(passwordVisibilityButton_, &ElaIconButton::clicked, this, &LoginWindow::togglePasswordVisibility);
     passwordLayout->setSpacing(5);
     passwordLayout->addWidget(passwordEdit_);
     passwordLayout->addWidget(passwordVisibilityButton_);
@@ -163,8 +166,6 @@ void LoginWindow::initUI() {
     QString buttonStyle = "ElaPushButton:hover {background-color: #f1f3f5;}";
     registerButton_->setStyleSheet(buttonStyle);
     loginButton_->setStyleSheet(buttonStyle);
-    connect(registerButton_, &ElaPushButton::clicked, this, &LoginWindow::signUp);
-    connect(loginButton_, &ElaPushButton::clicked, this, &LoginWindow::login);
     buttonLayout->addWidget(registerButton_);
     buttonLayout->addWidget(loginButton_);
 

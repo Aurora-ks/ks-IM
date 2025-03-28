@@ -13,6 +13,19 @@ RegisterWindow::RegisterWindow(QWidget *parent): ElaWidget(parent), http_(new Ne
     setWindowModality(Qt::ApplicationModal);
     setWindowButtonFlags(ElaAppBarType::CloseButtonHint);
     initUI();
+    connect(unknowGenderRadio_, &ElaRadioButton::toggled, [this](bool checked) {
+        if(checked) gender_ = 0;
+    });
+    connect(maleGenderRadio_, &ElaRadioButton::toggled, [this](bool checked) {
+        if(checked) gender_ = 1;
+    });
+    connect(femaleGenderRadio_, &ElaRadioButton::toggled, [this](bool checked) {
+        if(checked) gender_ = 2;
+    });
+    connect(showPasswordButton_, &ElaPushButton::clicked, this, &RegisterWindow::togglePasswordVisibility);
+    connect(showPasswordReButton_, &ElaPushButton::clicked, this, &RegisterWindow::togglePasswordVisibility);
+    connect(sendCodeButton_, &ElaPushButton::clicked, this, &RegisterWindow::sendVerificationCode);
+    connect(registerButton_, &ElaPushButton::clicked, this, &RegisterWindow::signUp);
 }
 
 RegisterWindow::~RegisterWindow() {
@@ -140,16 +153,6 @@ void RegisterWindow::initUI() {
     maleGenderRadio_ = new ElaRadioButton("男", this);
     femaleGenderRadio_ = new ElaRadioButton("女", this);
 
-    connect(unknowGenderRadio_, &ElaRadioButton::toggled, [this](bool checked) {
-        if(checked) gender_ = 0;
-    });
-    connect(maleGenderRadio_, &ElaRadioButton::toggled, [this](bool checked) {
-        if(checked) gender_ = 1;
-    });
-    connect(femaleGenderRadio_, &ElaRadioButton::toggled, [this](bool checked) {
-        if(checked) gender_ = 2;
-    });
-
     genderLayout->setSpacing(5);
     genderLayout->addWidget(genderText);
     genderLayout->addStretch();
@@ -179,7 +182,6 @@ void RegisterWindow::initUI() {
     showPasswordButton_->setStyleSheet("QPushButton {"
         "    padding: 3px;"
         "}");
-    connect(showPasswordButton_, &ElaPushButton::clicked, this, &RegisterWindow::togglePasswordVisibility);
     passwordLayout->setSpacing(5);
     passwordLayout->addWidget(passwordEdit_);
     passwordLayout->addWidget(showPasswordButton_);
@@ -194,7 +196,7 @@ void RegisterWindow::initUI() {
     showPasswordReButton_->setStyleSheet("QPushButton {"
         "    padding: 3px;"
         "}");
-    connect(showPasswordReButton_, &ElaPushButton::clicked, this, &RegisterWindow::togglePasswordVisibility);
+
     passwordReLayout->setSpacing(5);
     passwordReLayout->addWidget(passwordReEdit_);
     passwordReLayout->addWidget(showPasswordReButton_);
@@ -208,7 +210,6 @@ void RegisterWindow::initUI() {
     sendCodeButton_ = new ElaPushButton("发送验证码", this);
     sendCodeButton_->setStyleSheet(buttonStyle);
 
-    connect(sendCodeButton_, &ElaPushButton::clicked, this, &RegisterWindow::sendVerificationCode);
     emailLayout->setSpacing(5);
     emailLayout->addWidget(emailEdit_);
     emailLayout->addWidget(sendCodeButton_);
@@ -221,7 +222,6 @@ void RegisterWindow::initUI() {
     // 注册按钮
     registerButton_ = new ElaPushButton("注册", this);
     registerButton_->setStyleSheet(buttonStyle);
-    connect(registerButton_, &ElaPushButton::clicked, this, &RegisterWindow::signUp);
 
     // 主布局
     QVBoxLayout *mainLayout = new QVBoxLayout(this);

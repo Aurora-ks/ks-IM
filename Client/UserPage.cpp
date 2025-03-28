@@ -20,6 +20,8 @@ UserPage::UserPage(QWidget *parent): ElaScrollPage(parent) {
     window_ = dynamic_cast<MainWindow *>(parent);
     initLayout();
     updateInfo();
+    connect(resetButton_, &ElaPushButton::clicked, this, &UserPage::updateInfo);
+    connect(saveButton_, &ElaPushButton::clicked, this, &UserPage::modifyUserInfo);
 }
 
 void UserPage::initLayout() {
@@ -105,42 +107,6 @@ void UserPage::initLayout() {
     QString buttonStyle = "ElaPushButton:hover {background-color: #f1f3f5;}";
     resetButton_->setStyleSheet(buttonStyle);
     saveButton_->setStyleSheet(buttonStyle);
-    connect(resetButton_, &ElaPushButton::clicked, this, [this]() {
-        updateInfo();
-    });
-    connect(saveButton_, &ElaPushButton::clicked, this, [this]() {
-        LOG_INFO("c[UserPage::saveButton] send user info modify request");
-        QString name = userName_->text();
-        QString email = userEmail_->text();
-        QString phone = userPhone_->text();
-        if(name.isEmpty() || email.isEmpty() || phone.isEmpty()) {
-            ElaMessageBar::error(ElaMessageBarType::Top, "错误", "请填写完整信息", 2000, this);
-            return;
-        }
-
-        int64_t uid = window_->getUser()->getUserID();
-        QJsonObject json;
-        json["id"] = uid;
-        json["name"] = name;
-        json["email"] = email;
-        json["phone"] = phone;
-        json["gender"] = gender_;
-        json["icon"] = "";
-        auto resp = window_->http()->postToUrl(QUrl(HTTP_PREFIX"/user/modify"), QJsonDocument(json).toJson());
-        if(!resp) {
-            LOG_WARN("c[UserPage] send user info modify request failed, code:{}, err:{}", resp.statusCode(), resp.errorString().toStdString());
-            ElaMessageBar::error(ElaMessageBarType::Top, "错误", "网络错误", 2000, this);
-            return;
-        }
-        auto respJson = resp.data();
-        if(!respJson) {
-            LOG_WARN("c[UserPage] send user info modify request error, code:{}, msg:{}", respJson.code(), respJson.message().toStdString());
-            ElaMessageBar::error(ElaMessageBarType::Top, "错误", "修改失败", 2000, this);
-            return;
-        }
-        window_->bindUser(uid);
-        updateInfo();
-    });
 
     // 整体布局
     QWidget *centralWidget = new QWidget(this);
@@ -177,4 +143,38 @@ void UserPage::updateInfo() {
     } else {
         unkonwGender_->setChecked(true);
     }
+}
+
+void UserPage::modifyUserInfo() {
+    LOG_INFO("c[UserPage::saveButton] send user info modify request");
+    QString name = userName_->text();
+    QString email = userEmail_->text();
+    QString phone = userPhone_->text();
+    if(name.isEmpty() || email.isEmpty() || phone.isEmpty()) {
+        ElaMessageBar::error(ElaMessageBarType::Top, "错误", "请填写完整信息", 2000, this);
+        return;
+    }
+
+    int64_t uid = window_->getUser()->getUserID();
+    QJsonObject json;
+    json["id"] = uid;
+    json["name"] = name;
+    json["email"] = email;
+    json["phone"] = phone;
+    json["gender"] = gender_;
+    json["icon"] = "";
+    auto resp = window_->http()->postToUrl(QUrl(HTTP_PREFIX"/user/modify"), QJsonDocument(json).toJson());
+    if(!resp) {
+        LOG_WARN("c[UserPage] send user info modify request failed, code:{}, err:{}", resp.statusCode(), resp.errorString().toStdString());
+        ElaMessageBar::error(ElaMessageBarType::Top, "错误", "网络错误", 2000, this);
+        return;
+    }
+    auto respJson = resp.data();
+    if(!respJson) {
+        LOG_WARN("c[UserPage] send user info modify request error, code:{}, msg:{}", respJson.code(), respJson.message().toStdString());
+        ElaMessageBar::error(ElaMessageBarType::Top, "错误", "修改失败", 2000, this);
+        return;
+    }
+    window_->bindUser(uid);
+    updateInfo();
 }

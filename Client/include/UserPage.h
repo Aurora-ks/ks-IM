@@ -12,7 +12,9 @@ class ElaPushButton;
 class UserPage : public ElaScrollPage{
 public:
     UserPage(QWidget *parent = nullptr);
-
+private slots:
+    void updateInfo();
+    void modifyUserInfo();
 private:
     QLabel *avatar_{nullptr};
     ElaText *userID_{nullptr};
@@ -28,7 +30,6 @@ private:
     int gender_{0};
 
     void initLayout();
-    void updateInfo();
 };
 
 

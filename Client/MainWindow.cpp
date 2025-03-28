@@ -18,6 +18,9 @@ MainWindow::MainWindow(int64_t uid, QWidget *parent)
     setNavigationBarDisplayMode(ElaNavigationType::Compact);
     bindUser(uid);
     initContent();
+    connect(this, &MainWindow::userInfoCardClicked, this, [this]() {
+        this->navigation(userKey_);
+    });
 }
 
 MainWindow::~MainWindow() {
@@ -70,7 +73,4 @@ void MainWindow::initContent() {
     addPageNode("Relation", relationPage_, ElaIconType::CircleUser);
     addFooterNode("User", userPage_, userKey_, 0, ElaIconType::User);
     addFooterNode("Setting", settingPage_, settingKey_, 0, ElaIconType::GearComplex);
-    connect(this, &MainWindow::userInfoCardClicked, this, [this]() {
-        this->navigation(userKey_);
-    });
 }

@@ -33,6 +33,8 @@ private:
     ElaPushButton *communicateButton_{nullptr};
     FriendTreeViewItem *user_{nullptr};
     QMap<int64_t, QString> groupingMap_{};
+
+    void initLayout();
 };
 
 

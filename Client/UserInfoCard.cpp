@@ -12,14 +12,23 @@
 #include "net.h"
 
 UserInfoCard::UserInfoCard(QWidget *parent) : QWidget(parent), user_(new FriendTreeViewItem) {
+    initLayout();
+    updateGrouping();
+    connect(aliasLineEdit_, &ElaLineEdit::editingFinished, this, &UserInfoCard::updateAlias);
+    connect(groupingComboBox_, &ElaComboBox::currentIndexChanged, this, &UserInfoCard::updateUserGrouping);
+}
+
+void UserInfoCard::initLayout() {
     groupingMap_.insert(0, "我的好友");
 
+    // avatar
     avatar_ = new QLabel(this);
     avatar_->setFixedSize(100, 100);
     QHBoxLayout *avatarHLayout = new QHBoxLayout();
     avatarHLayout->setContentsMargins(0, 0, 0, 0);
     avatarHLayout->addWidget(avatar_);
 
+    // name and id text
     name_ = new ElaText(this);
     name_->setTextPixelSize(14);
     name_->setTextStyle(ElaTextType::TextStyle::Title);
@@ -33,10 +42,10 @@ UserInfoCard::UserInfoCard(QWidget *parent) : QWidget(parent), user_(new FriendT
     nameLayout->addWidget(id_);
     avatarHLayout->addLayout(nameLayout);
 
+    // alias edit
     ElaText *aliasText = new ElaText("备注", 14, this);
     aliasLineEdit_ = new ElaLineEdit(this);
     aliasLineEdit_->setPlaceholderText("设置好友备注");
-    connect(aliasLineEdit_, &ElaLineEdit::editingFinished, this, &UserInfoCard::updateAlias);
 
     QHBoxLayout *aliasHLayout = new QHBoxLayout();
     aliasHLayout->setContentsMargins(0, 0, 0, 0);
@@ -44,6 +53,7 @@ UserInfoCard::UserInfoCard(QWidget *parent) : QWidget(parent), user_(new FriendT
     aliasHLayout->addStretch();
     aliasHLayout->addWidget(aliasLineEdit_);
 
+    // grouping combo box
     ElaText *groupingText = new ElaText("好友分组", 14, this);
     groupingComboBox_ = new ElaComboBox(this);
     groupingComboBox_->addItem("我的好友", 0);
@@ -52,14 +62,15 @@ UserInfoCard::UserInfoCard(QWidget *parent) : QWidget(parent), user_(new FriendT
     groupingHLayout->addWidget(groupingText);
     groupingHLayout->addStretch();
     groupingHLayout->addWidget(groupingComboBox_);
-    connect(groupingComboBox_, &ElaComboBox::currentIndexChanged, this, &UserInfoCard::updateUserGrouping);
 
+    // button
     communicateButton_ = new ElaPushButton("发消息", this);
     QHBoxLayout *communicateHLayout = new QHBoxLayout();
     communicateHLayout->setContentsMargins(0, 0, 0, 0);
     communicateHLayout->addWidget(communicateButton_);
     communicateHLayout->addStretch();
 
+    // main layout
     QVBoxLayout *mainVLayout = new QVBoxLayout(this);
     mainVLayout->setContentsMargins(50, 30, 50, 0);
     mainVLayout->addLayout(avatarHLayout);
@@ -67,8 +78,6 @@ UserInfoCard::UserInfoCard(QWidget *parent) : QWidget(parent), user_(new FriendT
     mainVLayout->addLayout(groupingHLayout);
     mainVLayout->addLayout(communicateHLayout);
     mainVLayout->addStretch();
-
-    updateGrouping();
 }
 
 void UserInfoCard::updateUserInfo(FriendTreeViewItem *user) {
