@@ -38,8 +38,18 @@ SettingError::operator bool() const {
 
 setting::setting(const QString &filename, const SettingFileType fileType) {
     if (fileType != INI && fileType != SQLite)
-        LOG_FATAL(
-            "setting::setting(): invalid filetype");
+        LOG_FATAL("setting::setting(): invalid filetype");
+
+    QFileInfo fileInfo(filename);
+    QDir dir = fileInfo.dir();
+    // 判断目录是否存在
+    if(!dir.exists()) {
+        if(dir.mkpath("."))
+            qInfo() << "[setting] 创建目录:" << dir.path();
+        else
+            qWarning() << "[setting] 创建目录失败:" << dir.path();
+    }
+
     fileType_ = fileType;
     switch (fileType) {
         case INI:
