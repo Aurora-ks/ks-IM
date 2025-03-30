@@ -8,9 +8,11 @@
 #include <Ela/ElaApplication.h>
 #include <QBoxLayout>
 #include "MainWindow.h"
-
+#include "setting.h"
 
 SettingPage::SettingPage(QWidget *parent): ElaScrollPage(parent) {
+    setting *setting = setting::getDBInstance("./data/setting.db");
+
     MainWindow *window = dynamic_cast<MainWindow *>(parent);
     setWindowTitle("设置");
     ElaText *themeText = new ElaText("主题设置", this);
@@ -20,6 +22,8 @@ SettingPage::SettingPage(QWidget *parent): ElaScrollPage(parent) {
     themeComboBox_ = new ElaComboBox(this);
     themeComboBox_->addItem("日间模式");
     themeComboBox_->addItem("夜间模式");
+    themeComboBox_->setCurrentIndex(eTheme->getThemeMode() == ElaThemeType::Light ? 0 : 1);
+
     ElaScrollPageArea *themeSwitchArea = new ElaScrollPageArea(this);
     QHBoxLayout *themeSwitchLayout = new QHBoxLayout(themeSwitchArea);
     ElaText *themeSwitchText = new ElaText("主题切换", this);
@@ -34,13 +38,17 @@ SettingPage::SettingPage(QWidget *parent): ElaScrollPage(parent) {
         else
             eTheme->setThemeMode(ElaThemeType::Dark);
     });
-    connect(eTheme, &ElaTheme::themeModeChanged, this, [this](ElaThemeType::ThemeMode themeMode) {
+    connect(eTheme, &ElaTheme::themeModeChanged, this, [this, setting](ElaThemeType::ThemeMode themeMode) {
         themeComboBox_->blockSignals(true);
         if (themeMode == ElaThemeType::Light)
             themeComboBox_->setCurrentIndex(0);
         else
             themeComboBox_->setCurrentIndex(1);
         themeComboBox_->blockSignals(false);
+
+        // TODO: use const expression
+        auto err = setting->setValueDB("ThemeMode", QString::number(themeMode));
+        if(err) qCritical() << "[SettingPage] 设置主题模式失败, err:" << err.text() << " type:" << err.type();
     });
 
     ElaText *helperText = new ElaText("应用程序设置", this);
@@ -65,7 +73,21 @@ SettingPage::SettingPage(QWidget *parent): ElaScrollPage(parent) {
     compactButton_ = new ElaRadioButton("Compact", this);
     maximumButton_ = new ElaRadioButton("Maximum", this);
     autoButton_ = new ElaRadioButton("Auto", this);
-    compactButton_->setChecked(true);
+    switch (window->getNavigationBarDisplayMode()) {
+        case ElaNavigationType::Minimal:
+            minimumButton_->setChecked(true);
+            break;
+        case ElaNavigationType::Compact:
+            compactButton_->setChecked(true);
+            break;
+        case ElaNavigationType::Maximal:
+            maximumButton_->setChecked(true);
+            break;
+        case ElaNavigationType::Auto:
+            autoButton_->setChecked(true);
+            break;
+    }
+
     ElaScrollPageArea *displayModeArea = new ElaScrollPageArea(this);
     QHBoxLayout *displayModeLayout = new QHBoxLayout(displayModeArea);
     ElaText *displayModeText = new ElaText("导航栏模式选择", this);
@@ -77,21 +99,37 @@ SettingPage::SettingPage(QWidget *parent): ElaScrollPage(parent) {
     displayModeLayout->addWidget(compactButton_);
     displayModeLayout->addWidget(maximumButton_);
     displayModeLayout->addWidget(autoButton_);
-    connect(minimumButton_, &ElaRadioButton::toggled, this, [window](bool checked) {
-        if (checked)
+    connect(minimumButton_, &ElaRadioButton::toggled, this, [window, setting](bool checked) {
+        if (checked){
             window->setNavigationBarDisplayMode(ElaNavigationType::Minimal);
+            // TODO: use const expression
+            auto err = setting->setValueDB("NavigationDisplayMode", "0");
+            if(err) qCritical() << "[SettingPage] 设置导航栏模式失败, err:" << err.text() << " type:" << err.type();
+        }
     });
-    connect(compactButton_, &ElaRadioButton::toggled, this, [window](bool checked) {
-        if (checked)
+    connect(compactButton_, &ElaRadioButton::toggled, this, [window, setting](bool checked) {
+        if (checked){
             window->setNavigationBarDisplayMode(ElaNavigationType::Compact);
+            // TODO: use const expression
+            auto err = setting->setValueDB("NavigationDisplayMode", "2");
+            if(err) qCritical() << "[SettingPage] 设置导航栏模式失败, err:" << err.text() << " type:" << err.type();
+        }
     });
-    connect(maximumButton_, &ElaRadioButton::toggled, this, [window](bool checked) {
-        if (checked)
+    connect(maximumButton_, &ElaRadioButton::toggled, this, [window, setting](bool checked) {
+        if (checked){
             window->setNavigationBarDisplayMode(ElaNavigationType::Maximal);
+            // TODO: use const expression
+            auto err = setting->setValueDB("NavigationDisplayMode", "1");
+            if(err) qCritical() << "[SettingPage] 设置导航栏模式失败, err:" << err.text() << " type:" << err.type();
+        }
     });
-    connect(autoButton_, &ElaRadioButton::toggled, this, [=](bool checked) {
-        if (checked)
+    connect(autoButton_, &ElaRadioButton::toggled, this, [window, setting](bool checked) {
+        if (checked){
             window->setNavigationBarDisplayMode(ElaNavigationType::Auto);
+            // TODO: use const expression
+            auto err = setting->setValueDB("NavigationDisplayMode", "3");
+            if(err) qCritical() << "[SettingPage] 设置导航栏模式失败, err:" << err.text() << " type:" << err.type();
+        }
     });
 
     QWidget *centralWidget = new QWidget(this);

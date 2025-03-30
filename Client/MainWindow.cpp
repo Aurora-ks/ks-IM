@@ -7,6 +7,8 @@
 #include "UserPage.h"
 #include "SettingPage.h"
 #include "RelationPage.h"
+#include "SessionPage.h"
+#include "setting.h"
 
 MainWindow::MainWindow(int64_t uid, QWidget *parent)
     : ElaWindow(parent),
@@ -15,7 +17,29 @@ MainWindow::MainWindow(int64_t uid, QWidget *parent)
       user_(new User()){
     setWindowTitle("ks-im");
     setWindowIcon(QIcon(":/images/resource/pic/Cirno.png"));
-    setNavigationBarDisplayMode(ElaNavigationType::Compact);
+    setting* setting = setting::getDBInstance("./data/setting.db");
+    // TODO: user const expression
+    auto [val, err] = setting->valueDB("NavigationDisplayMode", "2");
+    if(err) qWarning() << "c[MainWindow::MainWindow] get setting failed";
+    else{
+        switch(val.toInt()) {
+            case 0:
+                setNavigationBarDisplayMode(ElaNavigationType::Minimal);
+                break;
+            case 1:
+                setNavigationBarDisplayMode(ElaNavigationType::Maximal);
+                break;
+            case 2:
+                setNavigationBarDisplayMode(ElaNavigationType::Compact);
+                break;
+            case 3:
+                setNavigationBarDisplayMode(ElaNavigationType::Auto);
+                break;
+            default:
+                qWarning() << "[MainWindow] load config NavigationDisplayMode invalid val:" << val;
+        }
+    }
+
     bindUser(uid);
     initContent();
     connect(this, &MainWindow::userInfoCardClicked, this, [this]() {
@@ -24,6 +48,7 @@ MainWindow::MainWindow(int64_t uid, QWidget *parent)
 }
 
 MainWindow::~MainWindow() {
+    setting::close();
     ws_->disconnect();
     delete http_;
     delete ws_;
@@ -67,9 +92,11 @@ void MainWindow::updateUserInfo() {
 }
 
 void MainWindow::initContent() {
+    sessionPage_ = new SessionPage(this);
     relationPage_ = new RelationPage(this);
     userPage_ = new UserPage(this);
     settingPage_ = new SettingPage(this);
+    addPageNode("Session", sessionPage_, ElaIconType::MessageLines);
     addPageNode("Relation", relationPage_, ElaIconType::CircleUser);
     addFooterNode("User", userPage_, userKey_, 0, ElaIconType::User);
     addFooterNode("Setting", settingPage_, settingKey_, 0, ElaIconType::GearComplex);

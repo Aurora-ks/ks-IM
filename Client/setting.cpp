@@ -5,9 +5,6 @@
 #include <QSqlError>
 #include <QFileInfo>
 
-using enum ErrorType;
-using enum SettingFileType;
-
 SettingError::SettingError(ErrorType type, const QString &text): type_(type), text_(text) {
 }
 
@@ -35,6 +32,8 @@ SettingError::SettingError(const QSqlError &error) {
 SettingError::operator bool() const {
     return type_ != NoError;
 }
+
+QMap<QString, setting*> setting::instance_;
 
 setting::setting(const QString &filename, const SettingFileType fileType) {
     if (fileType != INI && fileType != SQLite)
@@ -199,4 +198,27 @@ SettingError setting::createTable(const QString &table) {
     if (!query.exec())
         return SettingError(query.lastError());
     return SettingError();
+}
+
+setting* setting::getDBInstance(const QString &filename) {
+    if(!instance_.contains(filename)){
+        setting *s = new setting(filename, SQLite);
+        instance_.insert(filename, s);
+    }
+    return instance_[filename];
+}
+
+setting* setting::getIniInstance(const QString &filename) {
+    if(!instance_.contains(filename)){
+        setting *s = new setting(filename, INI);
+        instance_.insert(filename, s);
+    }
+    return instance_[filename];
+}
+
+void setting::close() {
+    for(auto i : instance_){
+        i->close();
+        delete i;
+    }
 }

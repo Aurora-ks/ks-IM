@@ -1,9 +1,11 @@
 #include <QApplication>
 #include <Ela/ElaApplication.h>
+#include <Ela/ElaTheme.h>
 #include "LoginWindow.h"
 #include "MainWindow.h"
 #include "logger.h"
 #include "user.h"
+#include "setting.h"
 #define DEBUG 1
 // Qt消息处理器（将Qt日志转发到spdlog）
 void qtMessageHandler(QtMsgType type,
@@ -64,6 +66,13 @@ int main(int argc, char *argv[]) {
         mw = new MainWindow(uid);
         mw->moveToCenter();
         mw->show();
+        setting *setting = setting::getDBInstance("./data/setting.db");
+        auto [val, err] = setting->valueDB("ThemeMode", "0");
+        if(err) qCritical() << "[setting] load ThemeMode err:" << err.text() << " type:" << err.type();
+        if(val == "1")
+            eTheme->setThemeMode(ElaThemeType::ThemeMode::Dark);
+        else
+            eTheme->setThemeMode(ElaThemeType::ThemeMode::Light);
         w->close();
         w->deleteLater();
     });

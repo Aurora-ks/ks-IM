@@ -5,7 +5,7 @@
 #include <QSettings>
 #include <QSqlDatabase>
 
-enum class ErrorType {
+enum ErrorType {
     NoError,
     ConnectionError,
     StatementError,
@@ -14,11 +14,12 @@ enum class ErrorType {
     InvalidFileType
 };
 
-enum class SettingFileType {
+enum SettingFileType {
     NONE,
     INI,
     SQLite
 };
+
 
 class SettingError {
 public:
@@ -38,6 +39,10 @@ private:
 
 class setting {
 public:
+    static setting* getDBInstance(const QString &filename);
+    static setting* getIniInstance(const QString &filename);
+    static void close();
+
     explicit setting(const QString &filename, SettingFileType fileType);
 
     ~setting();
@@ -100,6 +105,8 @@ public:
     }
 
 private:
+    static QMap<QString, setting*> instance_;
+
     QSettings *setting_{nullptr};
     QSqlDatabase db_;
     QString filename_;
