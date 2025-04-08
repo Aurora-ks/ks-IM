@@ -41,6 +41,10 @@ class setting {
 public:
     static setting* getDBInstance(const QString &filename);
     static setting* getIniInstance(const QString &filename);
+    static QString GetDirPath();
+    static void SetDirPath(const QString &path);
+    static QString GetUserPath();
+    static void SetUserPath(const QString &path);
     static void close();
 
     explicit setting(const QString &filename, SettingFileType fileType);
@@ -106,6 +110,8 @@ public:
 
 private:
     static QMap<QString, setting*> instance_;
+    static QString dirPath_;
+    static QString userPath_;
 
     QSettings *setting_{nullptr};
     QSqlDatabase db_;

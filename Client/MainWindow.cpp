@@ -17,7 +17,7 @@ MainWindow::MainWindow(int64_t uid, QWidget *parent)
       user_(new User()){
     setWindowTitle("ks-im");
     setWindowIcon(QIcon(":/images/resource/pic/Cirno.png"));
-    setting* setting = setting::getDBInstance("./data/setting.db");
+    setting* setting = setting::getDBInstance(setting::GetUserPath() + "/setting.db");
     // TODO: user const expression
     auto [val, err] = setting->valueDB("NavigationDisplayMode", "2");
     if(err) qWarning() << "c[MainWindow::MainWindow] get setting failed";
@@ -44,6 +44,10 @@ MainWindow::MainWindow(int64_t uid, QWidget *parent)
     initContent();
     connect(this, &MainWindow::userInfoCardClicked, this, [this]() {
         this->navigation(userKey_);
+    });
+    connect(relationPage_, &RelationPage::sendMessageClicked, this, [this](FriendTreeViewItem *user) {
+        navigation(sessionPage_->property("ElaPageKey").toString());
+        sessionPage_->selectOrCreateSession(user);
     });
 }
 

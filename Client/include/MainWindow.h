@@ -8,6 +8,7 @@ class User;
 class UserPage;
 class SettingPage;
 class RelationPage;
+class SessionPage;
 
 class MainWindow :public ElaWindow{
     Q_OBJECT
@@ -23,11 +24,13 @@ public:
     Net* ws() { return ws_; }
 
 private:
+    SessionPage *sessionPage_{nullptr};
     RelationPage *relationPage_{nullptr};
     UserPage *userPage_{nullptr};
     SettingPage *settingPage_{nullptr};
     QString settingKey_{};
     QString userKey_{};
+    QString sessionKey_{};
     Net *http_{nullptr};
     Net *ws_{nullptr};
     User *user_{nullptr};

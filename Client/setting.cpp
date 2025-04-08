@@ -34,6 +34,8 @@ SettingError::operator bool() const {
 }
 
 QMap<QString, setting*> setting::instance_;
+QString setting::dirPath_ = "./data";
+QString setting::userPath_;
 
 setting::setting(const QString &filename, const SettingFileType fileType) {
     if (fileType != INI && fileType != SQLite)
@@ -221,4 +223,20 @@ void setting::close() {
         i->close();
         delete i;
     }
+}
+
+QString setting::GetDirPath() {
+    return dirPath_;
+}
+
+void setting::SetDirPath(const QString &path) {
+    dirPath_ = path;
+}
+
+QString setting::GetUserPath() {
+    return userPath_;
+}
+
+void setting::SetUserPath(const QString &path) {
+    userPath_ = path;
 }

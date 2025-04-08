@@ -63,10 +63,11 @@ int main(int argc, char *argv[]) {
     QObject::connect(w, &LoginWindow::loginSuccess, [&](int64_t uid) {
         LOG_INFO("u[{}] show main window", uid);
         User::SetUid(uid);
+        setting::SetUserPath(setting::GetDirPath() + QString("/%1").arg(uid));
         mw = new MainWindow(uid);
         mw->moveToCenter();
         mw->show();
-        setting *setting = setting::getDBInstance("./data/setting.db");
+        setting *setting = setting::getDBInstance(setting::GetUserPath() + "/setting.db");
         auto [val, err] = setting->valueDB("ThemeMode", "0");
         if(err) qCritical() << "[setting] load ThemeMode err:" << err.text() << " type:" << err.type();
         if(val == "1")

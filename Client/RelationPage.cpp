@@ -49,6 +49,8 @@ RelationPage::RelationPage(QWidget *parent) : QWidget(parent) {
             groupListView_->setStyleSheet("ElaTreeView{background-color:#343434;}ElaTreeView::item{height:50px;}");
         }
     });
+    connect(userInfoWidget_, &UserInfoCard::sendMessageClicked, this, &RelationPage::sendMessageClicked);
+    userListSwitchButton_->click();
 }
 
 RelationPage::~RelationPage() {
@@ -119,7 +121,6 @@ void RelationPage::initLayout() {
     userListView_->setHeaderHidden(true);
     userListView_->setItemDelegate(new NoChildIndentDelegate(this));
     userListView_->setIconSize(QSize(40, 40));
-    userListView_->setStyleSheet("ElaTreeView::item{height:50px;}");
 
     userListModel_ = new FriendListModel(this);
     userListView_->setModel(userListModel_);
@@ -130,7 +131,6 @@ void RelationPage::initLayout() {
     groupListView_->setHeaderHidden(true);
     groupListView_->setItemDelegate(new NoChildIndentDelegate(this));
     groupListView_->setIconSize(QSize(40, 40));
-    groupListView_->setStyleSheet("ElaTreeView::item{height:50px;}");
 
     leftStacked_->setContentsMargins(0, 0, 0, 0);
     leftStacked_->addWidget(userListView_);
@@ -161,7 +161,6 @@ void RelationPage::initLayout() {
 
     // splitter
     QSplitter *splitter = new QSplitter(Qt::Horizontal, this);
-    splitter->setStyleSheet("QSplitter::handle{background-color:rgb(233,233,233);}");
     splitter->setHandleWidth(1);
     splitter->setChildrenCollapsible(false);
     splitter->addWidget(leftWidget);
@@ -176,7 +175,6 @@ void RelationPage::initLayout() {
     });
 
     // main layout
-    userListSwitchButton_->click();
     QHBoxLayout *mainHLayout = new QHBoxLayout();
     mainHLayout->setContentsMargins(0, 0, 0, 0);
     mainHLayout->addWidget(splitter);

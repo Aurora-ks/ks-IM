@@ -11,12 +11,15 @@ class ElaTreeView;
 class RelationNotifyWidget;
 class UserInfoCard;
 class FriendListModel;
+class FriendTreeViewItem;
 
 class RelationPage : public QWidget{
     Q_OBJECT
 public:
     explicit RelationPage(QWidget *parent = nullptr);
     ~RelationPage();
+signals:
+    void sendMessageClicked(FriendTreeViewItem *user);
 private slots:
     void showFriendInfo(const QModelIndex &index);
 private:

@@ -18,6 +18,7 @@ public:
     ~UserInfoCard() = default;
 signals:
     void groupingChanged(int64_t oldGroupId, FriendTreeViewItem *item);
+    void sendMessageClicked(FriendTreeViewItem *user);
 private slots:
     void updateAlias();
     void updateUserGrouping(int index);

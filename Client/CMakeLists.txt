@@ -48,6 +48,12 @@ add_executable(Client
         include/UserInfoCard.h
         model/FriendTreeViewItem.cpp
         include/FriendTreeViewItem.h
+        SessionPage.cpp
+        include/SessionPage.h
+        model/SessionListModel.cpp
+        include/SessionListModel.h
+        model/MessageListModel.cpp
+        include/MessageListModel.h
 )
 
 target_link_libraries(Client

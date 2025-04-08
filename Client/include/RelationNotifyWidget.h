@@ -15,9 +15,9 @@ public:
     ~RelationNotifyWidget() = default;
 
 private:
-    ElaText *title_;
-    ElaIconButton *delButton_;
-    ElaListView *listView_;
+    ElaText *title_{nullptr};
+    ElaIconButton *delButton_{nullptr};
+    ElaListView *listView_{nullptr};
 
     void initLayout();
 };

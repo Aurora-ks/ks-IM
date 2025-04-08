@@ -16,6 +16,9 @@ UserInfoCard::UserInfoCard(QWidget *parent) : QWidget(parent), user_(new FriendT
     updateGrouping();
     connect(aliasLineEdit_, &ElaLineEdit::editingFinished, this, &UserInfoCard::updateAlias);
     connect(groupingComboBox_, &ElaComboBox::currentIndexChanged, this, &UserInfoCard::updateUserGrouping);
+    connect(communicateButton_, &ElaPushButton::clicked, [this](){
+       emit sendMessageClicked(user_);
+    });
 }
 
 void UserInfoCard::initLayout() {
@@ -87,8 +90,13 @@ void UserInfoCard::updateUserInfo(FriendTreeViewItem *user) {
         return;
     }
 
-    QPixmap pic(":/images/resource/pic/Cirno.png");
-    avatar_->setPixmap(pic.scaled(100, 100, Qt::KeepAspectRatio));
+    if(user->getUser().getUserID() % 2 == 0){
+        QPixmap pic(":/images/resource/pic/Cirno.png");
+        avatar_->setPixmap(pic.scaled(100, 100, Qt::KeepAspectRatio));
+    }else{
+        QPixmap pic(":/images/resource/pic/Avatar.png");
+        avatar_->setPixmap(pic.scaled(100, 100, Qt::KeepAspectRatio));
+    }
     name_->setText(user_->getUser().getUserName());
     id_->setText(user_->getUser().UserIDToString());
     aliasLineEdit_->setText(user_->getAlias());

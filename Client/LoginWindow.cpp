@@ -141,9 +141,7 @@ void LoginWindow::initUI() {
     passwordEdit_->setEchoMode(QLineEdit::Password);
     passwordEdit_->setStyleSheet(inputStyle);
     passwordVisibilityButton_ = new ElaIconButton(ElaIconType::Eye, this);
-    passwordVisibilityButton_->setStyleSheet("ElaIconButton {"
-        "    padding: 3px;"
-        "}");
+    passwordVisibilityButton_->setStyleSheet("ElaIconButton {padding: 3px;}");
     passwordLayout->setSpacing(5);
     passwordLayout->addWidget(passwordEdit_);
     passwordLayout->addWidget(passwordVisibilityButton_);
@@ -192,18 +190,7 @@ void LoginWindow::initContent() {
 }
 
 void LoginWindow::loadConf() {
-    QString filePath("./data/login.db");
-    QFileInfo fileInfo(filePath);
-    QDir dir = fileInfo.dir();
-    // 判断目录是否存在
-    if(!dir.exists()) {
-        if(dir.mkpath("."))
-            qInfo() << "创建目录:" << dir.path();
-        else
-            qWarning() << "创建目录失败:" << dir.path();
-    }
-
-    db_ = new setting(filePath, SettingFileType::SQLite);
+    db_ = new setting("./data/login.db", SettingFileType::SQLite);
     auto [autoLogin, error1] = db_->valueDB(skAutoLogin, "false");
     if (error1) qWarning() << "登录配置读取[AutoLogin]错误：" << error1.text();
     if(autoLogin == "true") autoLogin_ = true;

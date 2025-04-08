@@ -11,7 +11,7 @@
 #include "setting.h"
 
 SettingPage::SettingPage(QWidget *parent): ElaScrollPage(parent) {
-    setting *setting = setting::getDBInstance("./data/setting.db");
+    setting *setting = setting::getDBInstance(setting::GetUserPath() + "/setting.db");
 
     MainWindow *window = dynamic_cast<MainWindow *>(parent);
     setWindowTitle("设置");
