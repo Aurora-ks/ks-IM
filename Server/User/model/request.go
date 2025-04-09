@@ -45,6 +45,15 @@ type ModifyFriendAliasReq struct {
 	ID    int    `json:"id"`
 	Alias string `json:"alias"`
 }
+type GetSessionReq struct {
+	UserID  int  `json:"user_id"`
+	IsGroup bool `json:"is_group"`
+}
+type CreateSessionReq struct {
+	UserID  int  `json:"user_id"`
+	PeerID  int  `json:"peer_id"`
+	IsGroup bool `json:"is_group"`
+}
 
 // groups
 

@@ -18,6 +18,16 @@ type RespNewFriendRes struct {
 type AddRelGroupResp struct {
 	Id int `json:"id"`
 }
+type GetSessionResp struct {
+	SessionId int    `json:"session_id"`
+	PeerId    int    `json:"peer_id"`
+	LastAck   int    `json:"last_ack_msg_id"`
+	Name      string `json:"name"`
+	IsGroup   bool   `json:"is_group"`
+}
+type CreateSessionResp struct {
+	SessionId int `json:"session_id"`
+}
 
 // group
 

@@ -222,3 +222,58 @@ func ModifyFriendAlias(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, OK())
 }
+
+// GetSession 获取会话
+func GetSession(c *gin.Context) {
+	id := c.Query("user_id")
+	uid, err := strconv.Atoi(id)
+	if err != nil {
+		c.JSON(http.StatusOK, Res(ec.ParmsInvalid, "User Id Parse Failed"))
+		log.L().Error("User Id Parse Failed", log.Error(err))
+		return
+	}
+	isGroup := c.Query("is_group")
+	var bIsGroup bool
+	if isGroup == "true" {
+		bIsGroup = true
+	} else {
+		bIsGroup = false
+	}
+
+	sessionList, err := mysql.GetSession(uid, bIsGroup)
+	if err != nil {
+		c.JSON(http.StatusOK, Res(ec.DBQuery, "Get Session Failed"))
+		log.L().Error("Get Session Failed", log.Error(err))
+		return
+	}
+	data, err := json.Marshal(sessionList)
+	if err != nil {
+		c.JSON(http.StatusOK, Res(ec.JsonMarshal, "Session List Marshal Failed"))
+		log.L().Error("Session List Marshal Failed", log.Error(err))
+		return
+	}
+	c.JSON(http.StatusOK, OK(data))
+}
+
+// CreateSession 创建会话
+func CreateSession(c *gin.Context) {
+	var req model.CreateSessionReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusOK, Res(ec.BodyParseJson, "Create Session Parse Json Error"))
+		log.L().Error("Create Session Body Parse Json", log.Error(err))
+		return
+	}
+	resp, err := mysql.NewSession(req.UserID, req.PeerID, req.IsGroup)
+	if err != nil {
+		c.JSON(http.StatusOK, Res(ec.DBInsert, "Create Session Failed"))
+		log.L().Error("Create Session Failed", log.Error(err))
+		return
+	}
+	data, err := json.Marshal(resp)
+	if err != nil {
+		c.JSON(http.StatusOK, Res(ec.JsonMarshal, "Session Data Marshal Failed"))
+		log.L().Error("Session Data Marshal Failed", log.Error(err))
+		return
+	}
+	c.JSON(http.StatusOK, OK(data))
+}

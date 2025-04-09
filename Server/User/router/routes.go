@@ -33,6 +33,8 @@ func SetUp() *gin.Engine {
 	UserGroup.POST("/icon", logic.UpdateIcon)
 
 	RelGroup := apiGroup.Group("/rel")
+	RelGroup.GET("/session", logic.GetSession)
+	RelGroup.POST("/session", logic.CreateSession)
 	RelGroup.GET("/friend-list", logic.GetFriendships)
 	RelGroup.GET("/friend_grouping", logic.GetFriendGrouping)
 	RelGroup.GET("/friend-requests", logic.GetFriendReq)

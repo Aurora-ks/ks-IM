@@ -50,6 +50,14 @@ func SetUp() *gin.Engine {
 	})
 
 	rel := r.Group("/rel")
+	// 获取会话
+	rel.GET("/session", func(context *gin.Context) {
+		forwardRequest(context, "user")
+	})
+	// 创建会话
+	rel.POST("/session", func(context *gin.Context) {
+		forwardRequest(context, "user")
+	})
 	// 获取好友列表
 	rel.GET("/friend-list", func(context *gin.Context) {
 		forwardRequest(context, "user")

@@ -241,6 +241,44 @@ func ModifyFriendAlias(id int, alias string) (err error) {
 	return
 }
 
+// GetSession 获取会话
+func GetSession(uId int, isGroup bool) ([]*model.GetSessionResp, error) {
+	var stm string
+	if isGroup {
+		stm = "SELECT a.id, a.peer_id, a.is_group, a.last_ack_msg_id, b.`name` FROM conversations a JOIN `groups` b ON a.peer_id = b.id WHERE a.user_id = ? AND a.is_group = 1 AND a.deleted = 0;"
+	} else {
+		stm = "SELECT a.id, a.peer_id, a.is_group, a.last_ack_msg_id, b.`name`FROM conversations a JOIN `user` b ON a.peer_id = b.id WHERE a.user_id = ? AND a.is_group = 0 AND a.deleted = 0;"
+	}
+	rows, err := db.Query(stm, uId)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	sessionArray := make([]*model.GetSessionResp, 0)
+	for rows.Next() {
+		session := new(model.GetSessionResp)
+		if err = rows.Scan(&session.SessionId, &session.PeerId, &session.IsGroup, &session.LastAck, &session.Name); err != nil {
+			return nil, err
+		}
+		sessionArray = append(sessionArray, session)
+	}
+	return sessionArray, nil
+}
+
+// NewSession 创建会话
+func NewSession(uId, peerId int, isGroup bool) (*model.CreateSessionResp, error) {
+	stm := "INSERT INTO conversations(user_id, peer_id, is_group) VALUES (?, ?, ?)"
+	res, err := db.Exec(stm, uId, peerId, isGroup)
+	if err != nil {
+		return nil, err
+	}
+	sid, err := res.LastInsertId()
+	if err != nil {
+		return nil, err
+	}
+	return &model.CreateSessionResp{SessionId: int(sid)}, nil
+}
+
 // NewGroup 创建群组
 func NewGroup(uid int, name, description string, isPublic int) (gId int64, err error) {
 	stm := "INSERT INTO groups(creator_id, name, description, public) VALUES (?, ?, ?, ?)"
