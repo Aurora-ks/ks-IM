@@ -28,10 +28,10 @@ private:
     MessageDelegate *messageDelegate_{nullptr};
     QMap<int64_t, ElaListView*> messageViewMap_; // sessionId-messageList
     QMap<int64_t, int64_t> sessionIdMap_; // friendUserId-sessionId
-    QEventLoop *loop_;
 
     void initLayout();
     void initConnect();
+    void addMessageView(int64_t sessionId);
 };
 
 #endif //SESSIONPAGE_H

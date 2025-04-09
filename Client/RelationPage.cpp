@@ -10,6 +10,9 @@
 #include <Ela/ElaTheme.h>
 #include <Ela/ElaScrollBar.h>
 #include <Ela/ElaMessageBar.h>
+#include <Ela/ElaLineEdit.h>
+#include <Ela/ElaToolButton.h>
+#include <Ela/ElaMenu.h>
 #include "RelationNotifyWidget.h"
 #include "FriendListModel.h"
 #include "FriendTreeViewItem.h"
@@ -71,6 +74,31 @@ void RelationPage::initLayout() {
 
     QVBoxLayout *leftVLayout = new QVBoxLayout(leftWidget);
     leftVLayout->setContentsMargins(3, 2, 3, 2);
+
+    // left add friend or group line and button
+    searchEdit_ = new ElaLineEdit(this);
+    addButton_ = new ElaToolButton(this);
+    addButton_->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
+    addButton_->setElaIcon(ElaIconType::Plus);
+    addButton_->setText("添加");
+
+    ElaMenu *addMenu = new ElaMenu(this);
+//    addMenu->addElaIconAction(ElaIconType::CircleUser, "添加用户");
+//    addMenu->addElaIconAction(ElaIconType::UserGroup, "添加群组");
+//    addMenu->addMenu("添加用户");
+//    addMenu->addMenu("添加群组");
+    QAction *addUserAction = new QAction("添加用户", this);
+    QAction *addGroupAction = new QAction("添加群组", this);
+    connect(addUserAction, &QAction::triggered, this, &RelationPage::addUser);
+    connect(addGroupAction, &QAction::triggered, this, &RelationPage::addGroup);
+    addMenu->addAction(addUserAction);
+    addMenu->addAction(addGroupAction);
+    addButton_->setMenu(addMenu);
+
+    QHBoxLayout *addButtonHLayout = new QHBoxLayout();
+    addButtonHLayout->setContentsMargins(0, 0, 0, 0);
+    addButtonHLayout->addWidget(searchEdit_);
+    addButtonHLayout->addWidget(addButton_);
 
     // left notify button
     friendNotifyButton_ = new ElaPushButton("好友通知", this);
@@ -137,6 +165,7 @@ void RelationPage::initLayout() {
     leftStacked_->addWidget(groupListView_);
 
     // left layout
+    leftVLayout->addLayout(addButtonHLayout);
     leftVLayout->addWidget(friendNotifyButton_);
     leftVLayout->addWidget(groupNotifyButton_);
     leftVLayout->addSpacing(10);
@@ -255,4 +284,41 @@ void RelationPage::showFriendInfo(const QModelIndex &index) {
     if(!item) return;
     userInfoWidget_->updateUserInfo(item);
     rightStacked_->setCurrentWidget(userInfoWidget_);
+}
+
+void RelationPage::addGroup() {
+    // TODO
+    QString id = searchEdit_->text();
+    if(id.isEmpty()) return;
+    searchEdit_->clear();
+    qInfo() << "add Group:" << id;
+}
+
+void RelationPage::addUser() {
+    QString id = searchEdit_->text();
+    if(id.isEmpty()) return;
+    searchEdit_->clear();
+
+    QJsonObject json;
+    json["user_id"] = User::GetUid();
+    json["friend_id"] = id.toLongLong();
+    json["remark"] = "";
+    auto resp = Net::PostTo("/rel/add-friend", QJsonDocument(json).toJson());
+    if(!resp){
+        qWarning() << "[Net] [RelationPage::addUser] add user net work failed, err:" << resp.errorString();
+        return;
+    }
+    auto data = resp.data();
+    if(!data){
+        qWarning() << "[Net] [RelationPage::addUser] add user error, code: " << data.code() << ", message: " << data.message();
+        return;
+    }
+    auto dataJson = data.dataJson();
+    if(dataJson.isEmpty()){
+        qWarning() << "[Net] [RelationPage::addUser] add user received invalid";
+        return;
+    }
+
+    int64_t relId = dataJson["id"].toInteger();
+    qDebug() << "add user relation id:" << relId;
 }

@@ -8,6 +8,8 @@ class QStackedWidget;
 class ElaPushButton;
 class ElaIconButton;
 class ElaTreeView;
+class ElaLineEdit;
+class ElaToolButton;
 class RelationNotifyWidget;
 class UserInfoCard;
 class FriendListModel;
@@ -22,7 +24,11 @@ signals:
     void sendMessageClicked(FriendTreeViewItem *user);
 private slots:
     void showFriendInfo(const QModelIndex &index);
+    void addUser();
+    void addGroup();
 private:
+    ElaLineEdit *searchEdit_{nullptr};
+    ElaToolButton *addButton_{nullptr};
     ElaPushButton *friendNotifyButton_{nullptr};
     ElaPushButton *groupNotifyButton_{nullptr};
     QPushButton *userListSwitchButton_{nullptr};

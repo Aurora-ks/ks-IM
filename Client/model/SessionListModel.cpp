@@ -99,6 +99,10 @@ QVariant SessionListModel::data(const QModelIndex &index, int role) const {
             return item->data(TimeRole);
         case UnreadCountRole:
             return item->data(UnreadCountRole);
+        case LastAckRole:
+            return item->data(LastAckRole);
+        case IsGroupRole:
+            return item->data(IsGroupRole);
         default:
             return QVariant();
     }
@@ -119,6 +123,16 @@ void SessionListModel::addSession(int64_t sessionId, const QString &sessionName,
     item->setData(message, MessageRole);
     item->setData(time, TimeRole);
     item->setData(unreadCount, UnreadCountRole);
+    sessions_.insert(sessionId, item);
+    appendRow(item);
+}
+
+void SessionListModel::addSession(int64_t sessionId, const QString &name, int64_t lastAck, bool isGroup) {
+    QStandardItem *item = new QStandardItem;
+    item->setData(sessionId, SessionIdRole);
+    item->setData(name, NameRole);
+    item->setData(lastAck, LastAckRole);
+    item->setData(isGroup, IsGroupRole);
     sessions_.insert(sessionId, item);
     appendRow(item);
 }

@@ -11,7 +11,9 @@ enum MessageRoles {
     NameRole,
     MessageRole,
     TimeRole,
-    UnreadCountRole
+    UnreadCountRole,
+    LastAckRole,
+    IsGroupRole
 };
 
 class SessionListModel : public QStandardItemModel{
@@ -25,6 +27,7 @@ public:
     Qt::ItemFlags flags(const QModelIndex &index) const override;
 
     void addSession(int64_t sessionId, const QString& sessionName, const QString& sessionAvatar, const QString& message, const QString& time, int unreadCount);
+    void addSession(int64_t sessionId, const QString &name, int64_t lastAck, bool isGroup);
     void updateSession(int64_t sessionId, const QString &message, const QString& time, int unreadCount);
     QStandardItem* getSessionItem(int64_t sessionId);
 private:

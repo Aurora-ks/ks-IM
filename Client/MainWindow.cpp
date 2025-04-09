@@ -18,7 +18,7 @@ MainWindow::MainWindow(int64_t uid, QWidget *parent)
     setWindowTitle("ks-im");
     setWindowIcon(QIcon(":/images/resource/pic/Cirno.png"));
     setting* setting = setting::getDBInstance(setting::GetUserPath() + "/setting.db");
-    // TODO: user const expression
+    // TODO: use const expression
     auto [val, err] = setting->valueDB("NavigationDisplayMode", "2");
     if(err) qWarning() << "c[MainWindow::MainWindow] get setting failed";
     else{
