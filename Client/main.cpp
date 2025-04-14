@@ -1,11 +1,13 @@
 #include <QApplication>
 #include <Ela/ElaApplication.h>
 #include <Ela/ElaTheme.h>
+#include <Ela/ElaMessageBar.h>
 #include "LoginWindow.h"
 #include "MainWindow.h"
 #include "logger.h"
 #include "user.h"
 #include "setting.h"
+#include "ws.h"
 #define DEBUG 1
 // Qt消息处理器（将Qt日志转发到spdlog）
 void qtMessageHandler(QtMsgType type,
@@ -34,6 +36,23 @@ void qtMessageHandler(QtMsgType type,
             exit(EXIT_FAILURE);
     }
 }
+// 连接WebSocket
+bool wsConnect(){
+    auto resp = Net::GetTo("/message_service");
+    if(!resp){
+        LOG_ERROR("[Net] ws connect failed, err:{}", resp.errorString().toStdString());
+        return false;
+    }
+    auto data = resp.data();
+    if(!data){
+        LOG_ERROR("[Net] ws connect failed, msg:{}", data.message().toStdString());
+        return false;
+    }
+    auto json = data.dataJson();
+    if(json.empty()) qDebug() << "Empty";
+    QString url = QString("ws://%1:%2/login/%3").arg(json["ip"].toString()).arg(json["port"].toInt()).arg(User::GetUid());
+    return WsIns.connectToServer(url);
+}
 
 int main(int argc, char *argv[]) {
     QApplication a(argc, argv);
@@ -61,12 +80,16 @@ int main(int argc, char *argv[]) {
     LoginWindow *w = new LoginWindow();
     MainWindow *mw = nullptr;
     QObject::connect(w, &LoginWindow::loginSuccess, [&](int64_t uid) {
-        LOG_INFO("u[{}] show main window", uid);
         User::SetUid(uid);
         setting::SetUserPath(setting::GetDirPath() + QString("/%1").arg(uid));
         mw = new MainWindow(uid);
         mw->moveToCenter();
         mw->show();
+
+        bool connected = wsConnect();
+        if(!connected)
+            ElaMessageBar::error(ElaMessageBarType::Top, "网络错误", "连接服务器失败", 2000, mw);
+
         setting *setting = setting::getDBInstance(setting::GetUserPath() + "/setting.db");
         auto [val, err] = setting->valueDB("ThemeMode", "0");
         if(err) qCritical() << "[setting] load ThemeMode err:" << err.text() << " type:" << err.type();
@@ -74,6 +97,7 @@ int main(int argc, char *argv[]) {
             eTheme->setThemeMode(ElaThemeType::ThemeMode::Dark);
         else
             eTheme->setThemeMode(ElaThemeType::ThemeMode::Light);
+
         w->close();
         w->deleteLater();
     });
@@ -83,7 +107,6 @@ int main(int argc, char *argv[]) {
 
     w->moveToCenter();
     w->show();
-    LOG_INFO("show login window");
 
     return QApplication::exec();
 }

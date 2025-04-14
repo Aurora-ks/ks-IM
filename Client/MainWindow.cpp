@@ -13,7 +13,6 @@
 MainWindow::MainWindow(int64_t uid, QWidget *parent)
     : ElaWindow(parent),
       http_(new Net(NetType::HTTP)),
-      ws_(new Net(NetType::WS)),
       user_(new User()){
     setWindowTitle("ks-im");
     setWindowIcon(QIcon(":/images/resource/pic/Cirno.png"));
@@ -53,9 +52,7 @@ MainWindow::MainWindow(int64_t uid, QWidget *parent)
 
 MainWindow::~MainWindow() {
     setting::close();
-    ws_->disconnect();
     delete http_;
-    delete ws_;
     delete user_;
 }
 

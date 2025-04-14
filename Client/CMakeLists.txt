@@ -7,8 +7,10 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 
 include_directories(include)
+include_directories(proto)
 
 find_package(spdlog CONFIG REQUIRED)
+find_package(Protobuf CONFIG REQUIRED)
 
 # 指定qt安装目录
 set(CMAKE_PREFIX_PATH "D:/Qt/6.7.3/mingw_64")
@@ -26,6 +28,7 @@ find_package(
 
 add_executable(Client
         resources.qrc
+        proto/protocol.pb.cc
         main.cpp
         LoginWindow.cpp
         include/LoginWindow.h
@@ -54,6 +57,8 @@ add_executable(Client
         include/SessionListModel.h
         model/MessageListModel.cpp
         include/MessageListModel.h
+        include/ws.h
+        ws.cpp
 )
 
 target_link_libraries(Client
@@ -64,6 +69,7 @@ target_link_libraries(Client
         PRIVATE Qt6::Sql
         PRIVATE Qt6::Network
         PRIVATE Qt6::WebSockets
+        PRIVATE protobuf::libprotoc protobuf::libprotobuf protobuf::libprotobuf-lite
         PRIVATE ${ElaDll}
 )
 

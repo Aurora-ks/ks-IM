@@ -2,6 +2,8 @@
 #define SESSIONPAGE_H
 
 #include <QWidget>
+#include "protocol.pb.h"
+#include "ws.h"
 
 class QStackedWidget;
 class QEventLoop;
@@ -20,6 +22,7 @@ public slots:
     void selectOrCreateSession(FriendTreeViewItem *user);
 private slots:
     void onSessionSelected(const QModelIndex &current, const QModelIndex &previous);
+    void onMessageReceived(const protocol::Msg& message);
 private:
     ElaListView *sessionList_{nullptr};
     SessionListModel *sessionModel_{nullptr};

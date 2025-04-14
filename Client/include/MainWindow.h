@@ -21,7 +21,6 @@ public:
     void updateUserInfo();
 
     Net* http() { return http_; }
-    Net* ws() { return ws_; }
 
 private:
     SessionPage *sessionPage_{nullptr};
@@ -32,7 +31,6 @@ private:
     QString userKey_{};
     QString sessionKey_{};
     Net *http_{nullptr};
-    Net *ws_{nullptr};
     User *user_{nullptr};
 
     void initContent();

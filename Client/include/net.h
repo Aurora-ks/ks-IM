@@ -106,7 +106,7 @@ public:
     HttpResponse postToUrl(const QUrl &url, const QByteArray &body = QByteArray());
 
     // websocket
-    void setWsConectedCallback(const WsConectedCallback &callback) { wsConnectedCallback_ = callback; }
+    void setWsConnectedCallback(const WsConectedCallback &callback) { wsConnectedCallback_ = callback; }
     void setWsDisconnectedCallback(const WsDisconnectedCallback &callback) { wsDisconnectedCallback_ = callback; }
     void setWsBinaryCallback(const WsBinaryCallback &callback) { wsBinaryCallback_ = callback; }
     void setWsTextCallback(const WsTextCallback &callback) { wsTextCallback_ = callback; }
@@ -114,14 +114,11 @@ public:
     void setWsPongCallback(const WsPongCallback &callback) { wsPongCallback_ = callback; }
 
     bool connect();
-
     bool connectToUrl(const QUrl &url);
-
     void disconnect();
-
     void sendWsBinary(const QByteArray &data);
-
     void sendWsText(const QString &message);
+    void sendWsPing(const QByteArray &payload = QByteArray());
 
     static HttpResponse GetTo(const QString &url, const QMap<QString, QString> &query = QMap<QString, QString>()) {
         return Net(NetType::HTTP, QUrl(HTTP_PREFIX+url)).get(query);

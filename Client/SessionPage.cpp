@@ -1,4 +1,5 @@
 #include "SessionPage.h"
+#include "ws.h"
 
 #include <QBoxLayout>
 #include <QSplitter>
@@ -21,6 +22,9 @@ SessionPage::SessionPage(QWidget *parent) : QWidget(parent){
     initLayout();
     initConnect();
     connect(sessionList_->selectionModel(), &QItemSelectionModel::currentChanged, this, &SessionPage::onSessionSelected);
+
+    // 连接WebSocket消息接收信号
+    connect(&WebSocketManager::getInstance(), &WebSocketManager::messageReceived, this, &SessionPage::onMessageReceived);
 }
 
 void SessionPage::initLayout() {
@@ -73,6 +77,20 @@ void SessionPage::initLayout() {
        ElaListView *view = static_cast<ElaListView*>(messageStack_->currentWidget());
        if(view == nullptr) return;
        MessageListModel *model = static_cast<MessageListModel*>(view->model());
+
+       // 获取当前会话ID
+       QModelIndex currentIndex = sessionList_->currentIndex();
+       if(!currentIndex.isValid()) return;
+       int64_t sessionId = sessionModel_->itemFromIndex(currentIndex)->data(SessionIdRole).toLongLong();
+
+       // 使用WebSocket发送消息
+       QByteArray content = message.toUtf8();
+       if(!WebSocketManager::getInstance().sendSingleChatMessage(sessionId, sessionIdMap_.key(sessionId), content, 1)) {
+           ElaMessageBar::error(ElaMessageBarType::PositionPolicy::Top, "发送失败", "消息发送失败，请检查网络连接", 2000, this);
+           return;
+       }
+
+       // 添加到本地消息列表
        model->addMessage(model->rowCount(), message, 1);
        view->scrollToBottom();
     });
@@ -251,4 +269,21 @@ void SessionPage::addMessageView(int64_t sessionId) {
     messageList->setModel(model);
     messageViewMap_.insert(sessionId, messageList);
     messageStack_->addWidget(messageList);
+}
+
+void SessionPage::onMessageReceived(const protocol::Msg& message) {
+    // 检查是否是当前会话的消息
+    int64_t sessionId = message.conversation_id();
+    if(!messageViewMap_.contains(sessionId)) {
+        return;
+    }
+
+    // 获取消息视图和模型
+    ElaListView* view = messageViewMap_.value(sessionId);
+    MessageListModel* model = static_cast<MessageListModel*>(view->model());
+
+    // 添加消息到列表
+    QString content = QString::fromUtf8(message.content().data(), message.content().size());
+    model->addMessage(model->rowCount(), content, message.sender_id() == User::GetUid() ? 1 : 0);
+    view->scrollToBottom();
 }

@@ -205,3 +205,9 @@ void Net::sendWsText(const QString &message) {
         LOG_FATAL("[net::sendWsText()] use on invalid net type");
     ws_->sendTextMessage(message);
 }
+
+void Net::sendWsPing(const QByteArray &payload) {
+    if (type_ != WS)
+        LOG_FATAL("[net::sendWsPing()] use on invalid net type");
+    ws_->ping(payload);
+}
