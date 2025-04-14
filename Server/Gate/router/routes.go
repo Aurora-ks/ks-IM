@@ -3,11 +3,17 @@ package router
 import (
 	"Gate/consul"
 	"Gate/log"
+	"encoding/json"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"io"
 	"net/http"
 )
+
+type GetMessageServiceResp struct {
+	Ip   string `json:"ip"`
+	Port int    `json:"port"`
+}
 
 func SetUp() *gin.Engine {
 	r := gin.New()
@@ -24,17 +30,28 @@ func SetUp() *gin.Engine {
 		if err != nil {
 			log.L().Error("Failed to get service address", log.Error(err))
 			c.JSON(http.StatusInternalServerError, gin.H{
-				"code": "500",
-				"msg":  "Failed to get service address",
+				"code":    "500",
+				"message": "Failed to get service address",
 			})
 			return
 		}
+		data, err := json.Marshal(&GetMessageServiceResp{
+			Ip:   ip,
+			Port: port,
+		})
+		if err != nil {
+			log.L().Error("Failed to marshal data", log.Error(err))
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"code":    "500",
+				"message": "Failed to marshal data",
+			})
+			return
+		}
+
 		c.JSON(http.StatusOK, gin.H{
-			"code": "200",
-			"data": gin.H{
-				"ip":   ip,
-				"port": port,
-			},
+			"code":    "0",
+			"message": "OK",
+			"data":    data,
 		})
 	})
 
@@ -173,8 +190,8 @@ func forwardRequest(c *gin.Context, serviceName string) {
 	ip, port, err := consul.GetServiceByName(serviceName)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"code": "500",
-			"msg":  "Failed to get service address",
+			"code":    "500",
+			"message": "Failed to get service address",
 		})
 		return
 	}
@@ -208,8 +225,8 @@ func forwardRequest(c *gin.Context, serviceName string) {
 	resp, err := client.Do(req)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"code": "500",
-			"msg":  "Failed to forward request",
+			"code":    "500",
+			"message": "Failed to forward request",
 		})
 		return
 	}
@@ -225,8 +242,8 @@ func forwardRequest(c *gin.Context, serviceName string) {
 	_, err = io.Copy(c.Writer, resp.Body)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"code": "500",
-			"msg":  "Failed to copy response body",
+			"code":    "500",
+			"message": "Failed to copy response body",
 		})
 		return
 	}
