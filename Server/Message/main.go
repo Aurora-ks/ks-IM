@@ -87,12 +87,13 @@ func main() {
 	log.L().Info("Server Exiting")
 }
 
-func getIpv4() (ips []string, err error) {
+func getIpv4() ([]string, error) {
 	ifaces, err := net.Interfaces()
 	if err != nil {
-		return
+		return nil, err
 	}
 
+	ips := make([]string, 0)
 	for _, iface := range ifaces {
 		if iface.Flags&net.FlagUp == 0 {
 			continue // 接口未激活
@@ -100,12 +101,10 @@ func getIpv4() (ips []string, err error) {
 		if iface.Flags&net.FlagLoopback != 0 {
 			continue // 排除回环地址
 		}
-
 		addrs, err := iface.Addrs()
 		if err != nil {
-			return
+			return nil, err
 		}
-
 		for _, addr := range addrs {
 			var ip net.IP
 			switch v := addr.(type) {
@@ -120,22 +119,23 @@ func getIpv4() (ips []string, err error) {
 			ips = append(ips, ip.String())
 		}
 	}
-	return
+	return ips, nil
 }
 
 func registerService() (err error) {
-	ips, err := getIpv4()
-	if err != nil {
+	ip := os.Getenv("HOST_IP")
+	if ip == "" {
+		log.L().Error("Start Failed When Get Host IP", log.Error(err))
 		return
 	}
 	service := &api.AgentServiceRegistration{
 		ID:      settings.Conf.ServerConfig.ID,
 		Name:    settings.Conf.ServerConfig.Name,
-		Address: ips[0],
+		Address: ip,
 		Port:    settings.Conf.ServerConfig.Port,
 		Tags:    []string{"Message"},
 		Check: &api.AgentServiceCheck{
-			HTTP:                           fmt.Sprintf("http://%s:%d/health", ips[0], settings.Conf.ServerConfig.Port),
+			HTTP:                           fmt.Sprintf("http://%s:%d/health", ip, settings.Conf.ServerConfig.Port),
 			Interval:                       "10s",
 			Timeout:                        "10s",
 			DeregisterCriticalServiceAfter: "30s",

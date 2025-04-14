@@ -1,7 +1,6 @@
 package redis
 
 import (
-	"Message/logic"
 	"Message/settings"
 	"github.com/redis/go-redis/v9"
 	"time"
@@ -26,12 +25,12 @@ func ReadFromMQ(readCnt int, blockTimeMs time.Duration) ([]redis.XMessage, error
 	return messages[0].Messages, nil
 }
 
-func WriteToMQ(msg *logic.MQMsg) error {
-	mq := KP_MQ + msg.ReceivedMachID
+func WriteToMQ(receivedMachID string, val map[string]any) error {
+	mq := KP_MQ + receivedMachID
 	err := rds.XAdd(ctx, &redis.XAddArgs{
 		Stream: mq,
 		ID:     "*",
-		Values: msg.ToMap(),
+		Values: val,
 	}).Err()
 	return err
 }

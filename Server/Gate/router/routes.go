@@ -18,6 +18,26 @@ func SetUp() *gin.Engine {
 		})
 	})
 
+	// 获取Message服务地址
+	r.GET("/message_service", func(c *gin.Context) {
+		ip, port, err := consul.GetServiceByName("message")
+		if err != nil {
+			log.L().Error("Failed to get service address", log.Error(err))
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"code": "500",
+				"msg":  "Failed to get service address",
+			})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{
+			"code": "200",
+			"data": gin.H{
+				"ip":   ip,
+				"port": port,
+			},
+		})
+	})
+
 	// user服务
 	user := r.Group("/user")
 	// 获取用户信息

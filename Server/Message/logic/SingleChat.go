@@ -93,7 +93,7 @@ func SingleChatDelHandler(con *Connection, p *protocol.Packet) {
 			MsgType:        MsgTypeNotify,
 			Data:           p.Data,
 		}
-		if err := redis.WriteToMQ(mqData); err != nil {
+		if err := redis.WriteToMQ(mqData.ReceivedMachID, mqData.ToMap()); err != nil {
 			log.L().Error("Write To MQ", log.Error(err), log.Any("msg", p))
 		}
 	}
@@ -139,7 +139,7 @@ func SingleChatNotify(m *protocol.Msg) {
 			MsgType:        MsgTypeNotify,
 			Data:           data,
 		}
-		if err := redis.WriteToMQ(mq); err != nil {
+		if err := redis.WriteToMQ(mq.ReceivedMachID, mq.ToMap()); err != nil {
 			log.L().Error("Write To MQ", log.Error(err), log.Any("mq_msg", mq))
 		}
 	}

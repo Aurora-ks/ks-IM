@@ -123,7 +123,7 @@ func GroupChatNotify(m *protocol.Msg) {
 				MsgType:        MsgTypeNotify,
 				Data:           data,
 			}
-			if err := redis.WriteToMQ(mq); err != nil {
+			if err := redis.WriteToMQ(mq.ReceivedMachID, mq.ToMap()); err != nil {
 				log.L().Error("Write To MQ", log.Error(err), log.Any("mq_msg", mq))
 				continue
 			}
