@@ -1,6 +1,8 @@
 package log
 
 import (
+	"context"
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"gopkg.in/natefinch/lumberjack.v2"
 	"log/slog"
@@ -8,6 +10,7 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"os"
+	"runtime"
 	"runtime/debug"
 	"strings"
 	"time"
@@ -15,15 +18,54 @@ import (
 
 var log *slog.Logger
 
+type customHandler struct {
+	handler slog.Handler
+}
+
+func (h *customHandler) Enabled(ctx context.Context, level slog.Level) bool {
+	return h.handler.Enabled(ctx, level)
+}
+
+func (h *customHandler) Handle(ctx context.Context, record slog.Record) error {
+	// 获取调用处的文件和行号
+	_, file, line, ok := runtime.Caller(3)
+	if ok && record.Level != slog.LevelInfo {
+		record.AddAttrs(slog.String("file", file), slog.Int("line", line))
+	}
+	return h.handler.Handle(ctx, record)
+}
+
+func (h *customHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
+	return &customHandler{handler: h.handler.WithAttrs(attrs)}
+}
+
+func (h *customHandler) WithGroup(name string) slog.Handler {
+	return &customHandler{handler: h.handler.WithGroup(name)}
+}
+
 func Init() {
+	// 日志文件名
+	now := time.Now()
+	logFileName := fmt.Sprintf("%s.log", now.Format("2006-01-02"))
+	// 日志目录
+	logDir := "./log"
+	if _, err := os.Stat(logDir); os.IsNotExist(err) {
+		if err := os.Mkdir(logDir, 0755); err != nil {
+			fmt.Println("Failed to create log directory:", err)
+			return
+		}
+	}
+
 	lumberjackLogger := &lumberjack.Logger{
-		Filename:   "./server.log",
-		MaxSize:    10,
-		MaxBackups: 2,
-		MaxAge:     28,
+		Filename:   fmt.Sprintf("%s/%s", logDir, logFileName),
+		MaxSize:    100,
+		MaxBackups: 10,
+		MaxAge:     1,
 		Compress:   true,
 	}
-	log = slog.New(slog.NewJSONHandler(lumberjackLogger, &slog.HandlerOptions{Level: slog.LevelInfo}))
+	jsonHandler := slog.NewJSONHandler(lumberjackLogger, &slog.HandlerOptions{Level: slog.LevelInfo})
+	handler := &customHandler{handler: jsonHandler}
+	log = slog.New(handler)
 }
 
 func L() *slog.Logger {
@@ -47,6 +89,11 @@ func GinLogger() gin.HandlerFunc {
 		start := time.Now()
 		path := c.Request.URL.Path
 		query := c.Request.URL.RawQuery
+		// not log health check
+		if path == "/health" {
+			c.Next()
+			return
+		}
 		c.Next()
 
 		cost := time.Since(start)

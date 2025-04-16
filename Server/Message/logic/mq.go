@@ -6,6 +6,8 @@ import (
 	"Message/settings"
 	"Message/utils"
 	"context"
+	"errors"
+	"net"
 )
 
 const (
@@ -49,7 +51,10 @@ func ListenMQ(ctx context.Context) {
 		default:
 			msgs, err := redis.ReadFromMQ(ReadCount, BlockTime)
 			if err != nil {
-				log.L().Error("Read From MQ", log.Error(err))
+				var netErr net.Error
+				if !errors.As(err, &netErr) && netErr.Timeout() {
+					log.L().Error("Read From MQ", log.Error(err))
+				}
 				continue
 			}
 			for _, msg := range msgs {
