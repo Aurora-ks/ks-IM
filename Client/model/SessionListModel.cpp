@@ -3,6 +3,8 @@
 #include <QPainter>
 #include <QPainterPath>
 
+using namespace SessionList;
+
 SessionDelegate::SessionDelegate(QObject *parent)
         : QStyledItemDelegate(parent),
           backgroundColor_(Qt::white),

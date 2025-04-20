@@ -54,7 +54,7 @@ public:
     bool isConnected() const;
 
     // 消息发送方法
-    bool sendSingleChatMessage(uint64_t conversationId, uint64_t receiverId,
+    uint64_t sendSingleChatMessage(uint64_t conversationId, uint64_t receiverId,
                      const QByteArray& content, uint32_t contentType);
     bool sendGroupChatMessage(uint64_t conversationId, uint64_t groupId,
                      const QByteArray& content, uint32_t contentType);
@@ -70,10 +70,11 @@ signals:
     void connectionError(QAbstractSocket::SocketError error, const QString& errorString);
 
     // 消息接收信号
-    void messageReceived(const protocol::Msg& message);
+    void messageReceived(uint64_t seq, const protocol::Msg& message);
     void ackReceived(const protocol::MsgACK_S& ack);
     void groupNotifyReceived(const protocol::GroupMsgNotify& notify);
     void relationApplyReceived(uint64_t applyId);
+    void messageIdReceived(uint64_t seq, uint64_t sessionId, uint64_t messageId);
 
 private:
     explicit WebSocketManager(QObject* parent = nullptr);

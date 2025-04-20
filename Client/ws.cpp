@@ -44,11 +44,11 @@ void WebSocketManager::cleanup() {
 bool WebSocketManager::connectToServer(const QString &url) {
     bool success = ws_->connectToUrl(url);
     if (success) {
-        LOG_INFO("[Net] [WebSocketManager::connectToServer] ws连接成功: {}", url.toStdString());
+        LOG_INFO("[Net] [WebSocketManager::connectToServer] ws连接成功");
         connected_ = true;
         emit connected();
     } else {
-        LOG_ERROR("[Net] [WebSocketManager::connectToServer] ws连接失败: {}", url.toStdString());
+        LOG_ERROR("[Net] [WebSocketManager::connectToServer] ws连接失败");
     }
     return success;
 }
@@ -66,11 +66,11 @@ bool WebSocketManager::isConnected() const {
     return connected_;
 }
 
-bool WebSocketManager::sendSingleChatMessage(uint64_t conversationId, uint64_t receiverId,
+uint64_t WebSocketManager::sendSingleChatMessage(uint64_t conversationId, uint64_t receiverId,
                                              const QByteArray &content, uint32_t contentType) {
     if (!ws_ || !connected_) {
         LOG_ERROR("[Net] [WebSocketManager::sendSingleChatMessage] 尝试在未连接状态下发送消息");
-        return false;
+        return -1;
     }
 
     // 创建消息
@@ -88,7 +88,7 @@ bool WebSocketManager::sendSingleChatMessage(uint64_t conversationId, uint64_t r
     msgSerialized.resize(msgSize);
     if (!msg.SerializeToArray(msgSerialized.data(), static_cast<int>(msgSize))) {
         LOG_ERROR("[Net] [WebSocketManager::sendSingleChatMessage] Msg序列化失败");
-        return false;
+        return -1;
     }
 
     // 创建数据包
@@ -109,7 +109,7 @@ bool WebSocketManager::sendSingleChatMessage(uint64_t conversationId, uint64_t r
     packetSerialized.resize(packetSize);
     if (!packet.SerializeToArray(packetSerialized.data(), static_cast<int>(packetSize))) {
         LOG_ERROR("[Net] [WebSocketManager::sendSingleChatMessage] Packet序列化失败");
-        return false;
+        return -1;
     }
 
     // 直接发送二进制数据
@@ -118,9 +118,7 @@ bool WebSocketManager::sendSingleChatMessage(uint64_t conversationId, uint64_t r
 
     // 将消息加入待确认队列
     addPendingMessage(data, seq);
-
-    LOG_INFO("[Net] [WebSocketManager::sendSingleChatMessage] 单聊消息已发送，用户: {}, 会话ID: {}", receiverId, conversationId);
-    return true;
+    return seq;
 }
 
 bool WebSocketManager::sendGroupChatMessage(uint64_t conversationId, uint64_t groupId,
@@ -257,7 +255,8 @@ void WebSocketManager::handleDisconnected() {
         }
     }
     emit disconnected();
-    LOG_INFO("[Net] [WebSocketManager::handleDisconnected] ws断开");
+    LOG_INFO("[Net] [WebSocketManager::handleDisconnected] ws断开，当前待确认消息数: {}",
+             std::to_string(pendingMessages_.size()));
 }
 
 void WebSocketManager::handleBinaryMessage(const QByteArray &data) {
@@ -271,7 +270,9 @@ void WebSocketManager::handleBinaryMessage(const QByteArray &data) {
 
 void WebSocketManager::handleError(QAbstractSocket::SocketError error) {
     QString errorString = socketErrorToString(error);
-    LOG_ERROR("[Net] [WebSocketManager::handleError] ws错误: {}", errorString.toStdString());
+    LOG_ERROR("[Net] [WebSocketManager::handleError] ws错误: {}, 错误码: {}",
+              errorString.toStdString(),
+              socketErrorToString(error).toStdString());
     emit connectionError(error, errorString);
 }
 
@@ -288,7 +289,7 @@ void WebSocketManager::processPacket(const protocol::Packet &packet) {
         {
             protocol::Msg msg;
             if (msg.ParseFromArray(packet.data().data(), packet.data().size())) {
-                emit messageReceived(msg);
+                emit messageReceived(packet.seq(), msg);
 
                 // 发送ACK确认收到
                 sendAck(packet.seq(), msg.conversation_id(), msg.msg_id());
@@ -301,6 +302,25 @@ void WebSocketManager::processPacket(const protocol::Packet &packet) {
             if (ack.ParseFromArray(packet.data().data(), packet.data().size())) {
                 // 收到ACK后，从待确认队列中移除对应的消息
                 removePendingMessage(ack.seq());
+                // 更新消息ID
+                if(ack.has_msg_id()) {
+                    // 从待确认队列中获取会话ID
+                    uint64_t sessionId = 0;
+                    {
+                        QMutexLocker locker(&pendingMessagesMutex_);
+                        auto it = pendingMessages_.find(ack.seq());
+                        if (it != pendingMessages_.end()) {
+                            protocol::Packet pendingPacket;
+                            if (pendingPacket.ParseFromArray(it->data.data(), it->data.size())) {
+                                protocol::Msg msg;
+                                if (msg.ParseFromArray(pendingPacket.data().data(), pendingPacket.data().size())) {
+                                    sessionId = msg.conversation_id();
+                                }
+                            }
+                        }
+                    }
+                    emit messageIdReceived(ack.seq(), sessionId, ack.msg_id());
+                }
                 emit ackReceived(ack);
             }
             break;
@@ -349,7 +369,11 @@ void WebSocketManager::removePendingMessage(uint64_t seq) {
 }
 
 void WebSocketManager::onRetryTimeout(uint64_t seq) {
-    if (!connected_) return;
+    if (!connected_) {
+        LOG_WARN("[Net] [WebSocketManager::onRetryTimeout] WebSocket未连接，取消重发消息，seq: {}",
+                 std::to_string(seq));
+        return;
+    }
 
     QMutexLocker locker(&pendingMessagesMutex_);
     auto it = pendingMessages_.find(seq);
@@ -357,7 +381,8 @@ void WebSocketManager::onRetryTimeout(uint64_t seq) {
 
     PendingMessage& msg = it.value();
     if (msg.retryCount >= maxRetryCount_) {
-        LOG_WARN("[Net] [WebSocketManager::onRetryTimeout] 消息重发次数超过上限，seq: {}", seq);
+        LOG_WARN("[Net] [WebSocketManager::onRetryTimeout] 消息重发次数超过上限，seq: {}",
+                 std::to_string(seq));
         if (msg.retryTimer) {
             msg.retryTimer->stop();
             delete msg.retryTimer;
@@ -367,6 +392,9 @@ void WebSocketManager::onRetryTimeout(uint64_t seq) {
     }
 
     msg.retryCount++;
+    LOG_DEBUG("[Net] [WebSocketManager::onRetryTimeout] 重发消息，seq: {}, 重发次数: {}",
+              std::to_string(seq),
+              std::to_string(msg.retryCount));
     ws_->sendWsBinary(msg.data);
 }
 

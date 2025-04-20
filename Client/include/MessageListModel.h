@@ -5,10 +5,13 @@
 #include <QStandardItemModel>
 #include "afx.h"
 
-enum MessageRole {
-    IdRole = Qt::UserRole + 1,
-    SenderRole // 0: 对方，1: 自己
-};
+namespace MessageList{
+    enum MessageRole {
+        IdRole = Qt::UserRole + 1,
+        SenderRole, // 0: 对方，1: 自己
+        SeqRole,
+    };
+}
 
 class MessageListModel : public QStandardItemModel{
     Q_OBJECT
@@ -20,7 +23,8 @@ public:
     QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
 
 public slots:
-    void addMessage(int64_t messageId, const QString &message, int senderRole);
+    void addMessage(const QString &message, int sender, uint64_t seq);
+    void updateMessageId(uint64_t seq, int64_t messageId);
 };
 
 class MessageDelegate : public QStyledItemDelegate {

@@ -5,16 +5,19 @@
 #include <QStyledItemDelegate>
 #include "afx.h"
 
-enum MessageRoles {
-    SessionIdRole = Qt::UserRole + 1,
-    AvatarRole,
-    NameRole,
-    MessageRole,
-    TimeRole,
-    UnreadCountRole,
-    LastAckRole,
-    IsGroupRole
-};
+namespace SessionList{
+    enum MessageRoles {
+        SessionIdRole = Qt::UserRole + 1,
+        PeerIdRole,
+        AvatarRole,
+        NameRole,
+        MessageRole,
+        TimeRole,
+        UnreadCountRole,
+        LastAckRole,
+        IsGroupRole
+    };
+}
 
 class SessionListModel : public QStandardItemModel{
 public:

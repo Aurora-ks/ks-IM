@@ -6,6 +6,8 @@
 #include <QAbstractTextDocumentLayout>
 #include <Ela/ElaTheme.h>
 
+using namespace MessageList;
+
 MessageDelegate::MessageDelegate(QObject *parent) : QStyledItemDelegate(parent) {}
 
 void MessageDelegate::paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const {
@@ -121,9 +123,22 @@ QVariant MessageListModel::data(const QModelIndex &index, int role) const {
     }
 }
 
-void MessageListModel::addMessage(int64_t messageId, const QString &message, int sender) {
+// sender: 0-对方，1-自己
+void MessageListModel::addMessage(const QString &message, int sender, uint64_t seq) {
     QStandardItem *item = new QStandardItem(message);
-    item->setData(messageId, IdRole);
+    item->setData(-1, IdRole);  // 初始ID设为-1表示未确认
     item->setData(sender, SenderRole);
+    item->setData(seq, SeqRole);  // 保存消息关联的ws数据包的序列号
     appendRow(item);
+}
+
+void MessageListModel::updateMessageId(uint64_t seq, int64_t messageId) {
+    // 根据seq找到对应的消息
+    for(int i = rowCount() - 1; i >= 0; --i) {
+        QStandardItem* item = this->item(i);
+        if(item->data(SeqRole).toULongLong() == seq) {
+            item->setData(messageId, IdRole);
+            break;
+        }
+    }
 }

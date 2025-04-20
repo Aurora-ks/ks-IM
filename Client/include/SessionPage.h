@@ -22,7 +22,7 @@ public slots:
     void selectOrCreateSession(FriendTreeViewItem *user);
 private slots:
     void onSessionSelected(const QModelIndex &current, const QModelIndex &previous);
-    void onMessageReceived(const protocol::Msg& message);
+    void onMessageReceived(uint64_t seq, const protocol::Msg& message);
 private:
     ElaListView *sessionList_{nullptr};
     SessionListModel *sessionModel_{nullptr};
@@ -30,7 +30,8 @@ private:
     QStackedWidget *messageStack_{nullptr};
     MessageDelegate *messageDelegate_{nullptr};
     QMap<int64_t, ElaListView*> messageViewMap_; // sessionId-messageList
-    QMap<int64_t, int64_t> sessionIdMap_; // friendUserId-sessionId
+    QMap<int64_t, int64_t> peer2SessionMap_; // peerId-sessionId
+    QMap<int64_t, int64_t> session2PeerMap_; // sessionId-peerId
 
     void initLayout();
     void initConnect();

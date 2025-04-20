@@ -18,13 +18,25 @@
 #include "FriendTreeViewItem.h"
 #include "net.h"
 
+using namespace SessionList;
+
 SessionPage::SessionPage(QWidget *parent) : QWidget(parent){
     initLayout();
     initConnect();
     connect(sessionList_->selectionModel(), &QItemSelectionModel::currentChanged, this, &SessionPage::onSessionSelected);
 
     // 连接WebSocket消息接收信号
-    connect(&WebSocketManager::getInstance(), &WebSocketManager::messageReceived, this, &SessionPage::onMessageReceived);
+    connect(&WsIns, &WebSocketManager::messageReceived, this, &SessionPage::onMessageReceived);
+    // 连接消息ID更新信号
+    connect(&WsIns, &WebSocketManager::messageIdReceived, this, [this](uint64_t seq, uint64_t sessionId, uint64_t messageId) {
+        LOG_DEBUG("[SessionPage] update message id, seq:{}, mid:{}", std::to_string(seq), std::to_string(messageId));
+        // 根据会话ID找到对应的消息列表
+        if(messageViewMap_.contains(sessionId)) {
+            ElaListView* view = messageViewMap_.value(sessionId);
+            MessageListModel* model = static_cast<MessageListModel*>(view->model());
+            model->updateMessageId(seq, messageId);
+        }
+    });
 }
 
 void SessionPage::initLayout() {
@@ -74,6 +86,7 @@ void SessionPage::initLayout() {
        if(messageEdit->toPlainText().isEmpty()) return;
        QString message = messageEdit->toPlainText();
        messageEdit->clear();
+
        ElaListView *view = static_cast<ElaListView*>(messageStack_->currentWidget());
        if(view == nullptr) return;
        MessageListModel *model = static_cast<MessageListModel*>(view->model());
@@ -85,13 +98,14 @@ void SessionPage::initLayout() {
 
        // 使用WebSocket发送消息
        QByteArray content = message.toUtf8();
-       if(!WebSocketManager::getInstance().sendSingleChatMessage(sessionId, sessionIdMap_.key(sessionId), content, 1)) {
+       uint64_t seq = WsIns.sendSingleChatMessage(sessionId, session2PeerMap_.key(sessionId), content, 1);
+       if(seq == 0) {
            ElaMessageBar::error(ElaMessageBarType::PositionPolicy::Top, "发送失败", "消息发送失败，请检查网络连接", 2000, this);
            return;
        }
 
        // 添加到本地消息列表
-       model->addMessage(model->rowCount(), message, 1);
+       model->addMessage(message, 1, seq);
        view->scrollToBottom();
     });
 
@@ -191,7 +205,8 @@ void SessionPage::initConnect() {
         if(obj.empty()) continue;
         int64_t sessionId = obj["session_id"].toInteger();
         sessionModel_->addSession(sessionId, obj["name"].toString(), obj["last_ack_msg_id"].toInteger(), false);
-        sessionIdMap_.insert(obj["peer_id"].toInteger(), sessionId);
+        peer2SessionMap_.insert(obj["peer_id"].toInteger(), sessionId);
+        session2PeerMap_.insert(sessionId, obj["peer_id"].toInteger());
         addMessageView(sessionId);
     }
 }
@@ -200,8 +215,8 @@ void SessionPage::selectOrCreateSession(FriendTreeViewItem *user) {
     if (!user || !sessionModel_ || !sessionList_) return;
     // 查找是否已存在该用户的会话
     int64_t uId = user->getUser().getUserID();
-    if(sessionIdMap_.contains(uId)){
-        int64_t sessionId = sessionIdMap_.value(uId);
+    if(peer2SessionMap_.contains(uId)){
+        int64_t sessionId = peer2SessionMap_.value(uId);
         QModelIndex index = sessionModel_->indexFromItem(sessionModel_->getSessionItem(sessionId));
         sessionList_->setCurrentIndex(index);
     }else {
@@ -231,7 +246,7 @@ void SessionPage::selectOrCreateSession(FriendTreeViewItem *user) {
 
         int64_t sid = json["session_id"].toInteger();
         QString name = user->getAlias().isEmpty() ? user->getUser().getUserName() : user->getAlias();
-        sessionIdMap_.insert(uId, sid);
+        peer2SessionMap_.insert(uId, sid);
         sessionModel_->addSession(sid, name, 0, false);
 
         // 选中新创建的会话
@@ -271,7 +286,7 @@ void SessionPage::addMessageView(int64_t sessionId) {
     messageStack_->addWidget(messageList);
 }
 
-void SessionPage::onMessageReceived(const protocol::Msg& message) {
+void SessionPage::onMessageReceived(uint64_t seq, const protocol::Msg& message) {
     // 检查是否是当前会话的消息
     int64_t sessionId = message.conversation_id();
     if(!messageViewMap_.contains(sessionId)) {
@@ -284,6 +299,5 @@ void SessionPage::onMessageReceived(const protocol::Msg& message) {
 
     // 添加消息到列表
     QString content = QString::fromUtf8(message.content().data(), message.content().size());
-    model->addMessage(model->rowCount(), content, message.sender_id() == User::GetUid() ? 1 : 0);
-    view->scrollToBottom();
+    model->addMessage(content, 1, seq);
 }
