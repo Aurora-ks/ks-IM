@@ -192,7 +192,7 @@ func requestSC(con *Connection, p *protocol.Packet) {
 		con.SendError(p.Seq, p.Cmd)
 		return
 	}
-	con.Send(seq, CmdSC, MsgTypeACK, data)
+	con.Send(seq, CmdACK, MsgTypeACK, data)
 	// 发送新消息通知
 	SingleChatNotify(m)
 }

@@ -168,7 +168,7 @@ func connHandler(con *Connection) {
 			go dispatchMessage(data, con)
 		// 发送消息
 		case data := <-con.SendChan:
-			err := con.Conn.WriteMessage(websocket.TextMessage, data)
+			err := con.Conn.WriteMessage(websocket.BinaryMessage, data)
 			if err != nil {
 				log.L().Error("Write Message", log.Error(err), log.Uint64("user_id", con.Uid))
 				quit <- true
