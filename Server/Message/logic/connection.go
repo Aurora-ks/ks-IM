@@ -144,8 +144,7 @@ func NewConnection(context *gin.Context) {
 
 func addConnection(con *Connection) error {
 	uid := con.Uid
-	conn := con.Conn
-	connectionsMap.Store(uid, conn)
+	connectionsMap.Store(uid, con)
 	return redis.UserOnline(strconv.FormatUint(uid, 10))
 }
 

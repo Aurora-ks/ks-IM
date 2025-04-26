@@ -52,7 +52,7 @@ func ListenMQ(ctx context.Context) {
 			msgs, err := redis.ReadFromMQ(ReadCount, BlockTime)
 			if err != nil {
 				var netErr net.Error
-				if !errors.As(err, &netErr) && netErr.Timeout() {
+				if errors.As(err, &netErr) && !netErr.Timeout() {
 					log.L().Error("Read From MQ", log.Error(err))
 				}
 				continue
