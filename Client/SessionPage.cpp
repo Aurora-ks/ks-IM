@@ -299,5 +299,5 @@ void SessionPage::onMessageReceived(uint64_t seq, const protocol::Msg& message) 
 
     // 添加消息到列表
     QString content = QString::fromUtf8(message.content().data(), message.content().size());
-    model->addMessage(content, 1, seq);
+    model->addMessage(content, 0, seq);
 }

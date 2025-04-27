@@ -19,7 +19,7 @@ void customTerminateHandler() {
     } catch (...) {
         logger->critical("未知异常类型");
     }
-    
+
     // 刷新日志并退出
     logger->flush();
     std::exit(EXIT_FAILURE);
@@ -71,7 +71,7 @@ void Logger::init(bool enableConsole, bool enableFile, spdlog::level::level_enum
 
         // 设置日志级别
         logger_->set_level(level);
-        
+
         // 设置刷新策略（每5秒或遇到error立即刷新）
         logger_->flush_on(spdlog::level::err);
         spdlog::flush_every(std::chrono::seconds(5));
@@ -93,4 +93,3 @@ void Logger::shutdown() {
     }
     spdlog::shutdown();  // 安全关闭所有资源
 }
-

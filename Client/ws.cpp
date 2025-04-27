@@ -209,7 +209,7 @@ bool WebSocketManager::sendAck(uint64_t seq, uint64_t convId, uint64_t lastMsgId
     protocol::Packet packet;
     packet.set_seq(generateSeq());
     packet.set_timestamp(QDateTime::currentMSecsSinceEpoch());
-    packet.set_cmd(CMD_ACK);  // ACK命令
+    packet.set_cmd(CMD_SC);  // ACK命令
     packet.set_msg_type(MSG_TYPE_ACK);  // ACK类型
 
     // 设置数据内容
