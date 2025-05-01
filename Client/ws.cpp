@@ -67,9 +67,11 @@ bool WebSocketManager::isConnected() const {
 }
 
 uint64_t WebSocketManager::sendSingleChatMessage(uint64_t conversationId, uint64_t receiverId,
-                                                 const QByteArray &content, uint32_t contentType) {
+                                                 const QByteArray &content, uint32_t contentType,
+                                                 const QString &fileName) {
     if (!ws_ || !connected_) {
-        LOG_ERROR("[Net] [WebSocketManager::sendSingleChatMessage] [uid:{}] 尝试在未连接状态下发送消息", User::GetUid());
+        LOG_ERROR("[Net] [WebSocketManager::sendSingleChatMessage] [uid:{}] 尝试在未连接状态下发送消息",
+                  User::GetUid());
         return -1;
     }
 
@@ -81,7 +83,9 @@ uint64_t WebSocketManager::sendSingleChatMessage(uint64_t conversationId, uint64
     msg.set_content_type(contentType);
     msg.set_is_group(false);
     msg.set_content(content.data(), content.size());
-
+    if (!fileName.isEmpty()) {
+        msg.set_file_name(fileName.toStdString());
+    }
     // 计算序列化后的大小
     size_t msgSize = msg.ByteSizeLong();
     std::string msgSerialized;
@@ -266,7 +270,8 @@ void WebSocketManager::handleDisconnected() {
 void WebSocketManager::handleBinaryMessage(const QByteArray &data) {
     protocol::Packet packet;
     if (!packet.ParseFromArray(data.data(), data.size())) {
-        LOG_ERROR("[Net] [WebSocketManager::handleBinaryMessage] [uid:{}] 收到的WebSocket消息无法解析为Packet", User::GetUid());
+        LOG_ERROR("[Net] [WebSocketManager::handleBinaryMessage] [uid:{}] 收到的WebSocket消息无法解析为Packet",
+                  User::GetUid());
         return;
     }
     processPacket(packet);
@@ -293,6 +298,7 @@ void WebSocketManager::processPacket(const protocol::Packet &packet) {
         case CMD_SC:  // 单聊消息
         case CMD_GC:  // 群聊消息
         {
+            if (msgType != MSG_TYPE_NOTIFY) return;
             protocol::Msg msg;
             if (msg.ParseFromArray(packet.data().data(), packet.data().size())) {
                 emit messageReceived(packet.seq(), msg);
@@ -304,10 +310,9 @@ void WebSocketManager::processPacket(const protocol::Packet &packet) {
         }
         case CMD_ACK:  // 服务器ACK
         {
+            if (msgType != MSG_TYPE_ACK) return;
             protocol::MsgACK_S ack;
             if (ack.ParseFromArray(packet.data().data(), packet.data().size())) {
-                // 收到ACK后，从待确认队列中移除对应的消息
-                removePendingMessage(ack.seq());
                 // 更新消息ID
                 if (ack.has_msg_id()) {
                     // 从待确认队列中获取会话ID
@@ -327,6 +332,8 @@ void WebSocketManager::processPacket(const protocol::Packet &packet) {
                     }
                     emit messageIdReceived(ack.seq(), sessionId, ack.msg_id());
                 }
+                // 收到ACK后，从待确认队列中移除对应的消息
+                removePendingMessage(ack.seq());
                 emit ackReceived(ack);
             }
             break;
@@ -341,7 +348,8 @@ void WebSocketManager::processPacket(const protocol::Packet &packet) {
             break;
         }
         default:
-            LOG_WARN("[Net] [WebSocketManager::processPacket] [uid:{}] 收到未知类型的消息: cmd={}, msgType={}", User::GetUid(), cmd, msgType);
+            LOG_WARN("[Net] [WebSocketManager::processPacket] [uid:{}] 收到未知类型的消息: cmd={}, msgType={}",
+                     User::GetUid(), cmd, msgType);
             break;
     }
 }

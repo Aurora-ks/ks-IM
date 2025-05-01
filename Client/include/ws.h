@@ -55,7 +55,7 @@ public:
 
     // 消息发送方法
     uint64_t sendSingleChatMessage(uint64_t conversationId, uint64_t receiverId,
-                     const QByteArray& content, uint32_t contentType);
+                     const QByteArray& content, uint32_t contentType, const QString& fileName = QString());
     bool sendGroupChatMessage(uint64_t conversationId, uint64_t groupId,
                      const QByteArray& content, uint32_t contentType);
     bool sendAck(uint64_t seq, uint64_t convId = 0, uint64_t lastMsgId = 0);
