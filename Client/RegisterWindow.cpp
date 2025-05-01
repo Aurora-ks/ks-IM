@@ -74,11 +74,11 @@ void RegisterWindow::sendVerificationCode() {
     query["email"] = email;
     auto resp = http_->getToUrl(QUrl(HTTP_PREFIX"/user/verify_code"), query);
     if(!resp) {
-        LOG_WARN("c[RegisterWindow::sendVerificationCode] request failed, code:{}, err:{}", resp.statusCode(), resp.errorString().toStdString());
+        LOG_WARN("[RegisterWindow::sendVerificationCode] request failed, code:{}, err:{}", resp.statusCode(), resp.errorString().toStdString());
         return;
     }
     if(!resp.data()) {
-        LOG_WARN("c[RegisterWindow::sendVerificationCode] request error, code:{}, msg:{}", resp.data().code(), resp.data().message().toStdString());
+        LOG_WARN("[RegisterWindow::sendVerificationCode] request error, code:{}, msg:{}", resp.data().code(), resp.data().message().toStdString());
     }
 }
 
@@ -109,12 +109,12 @@ void RegisterWindow::signUp() {
     req["gender"] = gender_;
     auto resp = http_->postToUrl(QUrl(HTTP_PREFIX"/user/register"), QJsonDocument(req).toJson());
     if(!resp) {
-        LOG_WARN("c[RegisterWindow::signUp] request failed, code:{}, err:{}", resp.statusCode(), resp.errorString().toStdString());
+        LOG_WARN("[RegisterWindow::signUp] request failed, code:{}, err:{}", resp.statusCode(), resp.errorString().toStdString());
         ElaMessageBar::error(ElaMessageBarType::Top, "错误", "注册失败", 2000, this);
         return;
     }
     if(!resp.data()) {
-        LOG_WARN("c[RegisterWindow::signUp] request error, code:{}, msg:{}", resp.data().code(), resp.data().message().toStdString());
+        LOG_WARN("[RegisterWindow::signUp] request error, code:{}, msg:{}", resp.data().code(), resp.data().message().toStdString());
         ElaMessageBar::error(ElaMessageBarType::Top, "错误", "注册失败", 2000, this);
         return;
     }

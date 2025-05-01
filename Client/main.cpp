@@ -19,19 +19,19 @@ void qtMessageHandler(QtMsgType type,
 
     switch (type) {
         case QtDebugMsg:
-            logger->debug("[QT] {} ({}:{})", message, file, context.line);
+            logger->debug("[QT] [uid:{}] {} ({}:{})", User::GetUid(), message, file, context.line);
             break;
         case QtInfoMsg:
-            logger->info("[QT] {}", message);
+            logger->info("[QT] [uid:{}] {}", User::GetUid(), message);
             break;
         case QtWarningMsg:
-            logger->warn("[QT] {} ({}:{})", message, file, context.line);
+            logger->warn("[QT] [uid:{}] {} ({}:{})", User::GetUid(), message, file, context.line);
             break;
         case QtCriticalMsg:
-            logger->error("[QT] {} ({}:{})", message, file, context.line);
+            logger->error("[QT] [uid:{}] {} ({}:{})", User::GetUid(), message, file, context.line);
             break;
         case QtFatalMsg:
-            logger->critical("[QT] FATAL: {} ({}:{})", message, file, context.line);
+            logger->critical("[QT] FATAL [uid:{}] : {} ({}:{})", User::GetUid(), message, file, context.line);
             logger->flush();
             exit(EXIT_FAILURE);
     }
@@ -73,10 +73,6 @@ int main(int argc, char *argv[]) {
 #endif
     );
     qInstallMessageHandler(qtMessageHandler);
-
-    QObject::connect(&a, &QApplication::aboutToQuit, []() {
-       LOG_INFO("application quit");
-    });
 
     LoginWindow *w = new LoginWindow();
     MainWindow *mw = nullptr;

@@ -29,7 +29,7 @@ SessionPage::SessionPage(QWidget *parent) : QWidget(parent){
     connect(&WsIns, &WebSocketManager::messageReceived, this, &SessionPage::onMessageReceived);
     // 连接消息ID更新信号
     connect(&WsIns, &WebSocketManager::messageIdReceived, this, [this](uint64_t seq, uint64_t sessionId, uint64_t messageId) {
-        LOG_DEBUG("[SessionPage] update message id, seq:{}, mid:{}", std::to_string(seq), std::to_string(messageId));
+        LOG_DEBUG("[SessionPage] [uid:{}] update message id, seq:{}, mid:{}", User::GetUid(), seq, messageId);
         // 根据会话ID找到对应的消息列表
         if(messageViewMap_.contains(sessionId)) {
             ElaListView* view = messageViewMap_.value(sessionId);
@@ -287,6 +287,7 @@ void SessionPage::addMessageView(int64_t sessionId) {
 }
 
 void SessionPage::onMessageReceived(uint64_t seq, const protocol::Msg& message) {
+    qDebug() << "[SessionPage::onMessageReceived] seq:" << seq << " message:" << message.content();
     // 检查是否是当前会话的消息
     int64_t sessionId = message.conversation_id();
     if(!messageViewMap_.contains(sessionId)) {

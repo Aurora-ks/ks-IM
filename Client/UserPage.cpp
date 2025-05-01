@@ -146,7 +146,7 @@ void UserPage::updateInfo() {
 }
 
 void UserPage::modifyUserInfo() {
-    LOG_INFO("c[UserPage::saveButton] send user info modify request");
+    LOG_INFO("[UserPage::saveButton] [uid:{}] send user info modify request", User::GetUid());
     QString name = userName_->text();
     QString email = userEmail_->text();
     QString phone = userPhone_->text();
@@ -165,13 +165,13 @@ void UserPage::modifyUserInfo() {
     json["icon"] = "";
     auto resp = window_->http()->postToUrl(QUrl(HTTP_PREFIX"/user/modify"), QJsonDocument(json).toJson());
     if(!resp) {
-        LOG_WARN("c[UserPage] send user info modify request failed, code:{}, err:{}", resp.statusCode(), resp.errorString().toStdString());
+        LOG_WARN("[UserPage] send user info modify request failed, code:{}, err:{}", resp.statusCode(), resp.errorString().toStdString());
         ElaMessageBar::error(ElaMessageBarType::Top, "错误", "网络错误", 2000, this);
         return;
     }
     auto respJson = resp.data();
     if(!respJson) {
-        LOG_WARN("c[UserPage] send user info modify request error, code:{}, msg:{}", respJson.code(), respJson.message().toStdString());
+        LOG_WARN("[UserPage] send user info modify request error, code:{}, msg:{}", respJson.code(), respJson.message().toStdString());
         ElaMessageBar::error(ElaMessageBarType::Top, "错误", "修改失败", 2000, this);
         return;
     }

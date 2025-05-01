@@ -74,7 +74,6 @@ void LoginWindow::login() {
         return;
     }
     // 发送登录请求
-    LOG_INFO("send login request");
     Net http(NetType::HTTP, QUrl(HTTP_PREFIX"/user/login"));
     QJsonObject json;
     json["id"] = name.toInt();

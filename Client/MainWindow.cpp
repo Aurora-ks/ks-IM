@@ -60,10 +60,10 @@ void MainWindow::bindUser(int64_t uid) {
     QMap<QString, QString> query;
     query["id"] = QString::number(uid);
     auto resp = http_->getToUrl(QUrl(HTTP_PREFIX"/user"), query);
-    LOG_INFO("u[{}] c[MainWindow::BindUser] send get user info request", uid);
+    LOG_INFO("[uid:{}] c[MainWindow::BindUser] send get user info request", uid);
 
     if(!resp) {
-        LOG_ERROR("u[{}] c[MainWindow::BindUser] get user info failed", uid);
+        LOG_ERROR("[uid:{}] [MainWindow::BindUser] get user info failed", uid);
         ElaMessageBar::error(ElaMessageBarType::Top, "错误", "获取用户信息失败", 2000, this);
         return;
     }
