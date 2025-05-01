@@ -16,9 +16,10 @@ message Msg{
   uint64 conversation_id = 2;
   uint64 sender_id = 3;
   uint64 receiver_id = 4;
-  uint32 content_type = 5;
+  uint32 content_type = 5; //0:text, 1:image, 2:file
   bool is_group = 6;
   bytes content = 7;
+  optional string file_name = 8;
 }
 // 客户端发送的ACK包
 message MsgACK_C{

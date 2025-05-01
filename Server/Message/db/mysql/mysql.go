@@ -35,13 +35,18 @@ func Close() {
 
 // SaveMessage 存储新消息
 func SaveMessage(msg *protocol.Msg, isGroup bool) (err error) {
+	// TODO: add file name
 	isGrp := 0
 	if isGroup {
 		isGrp = 1
 	}
-	stm := "INSERT INTO messages(id, sender_id, receiver_id, msg_type, msg_content, is_group) VALUES (?, ?, ?, ?, ?, ?)"
-	// 插入消息
-	_, err = db.Exec(stm, msg.MsgId, msg.SenderId, msg.ReceiverId, msg.ContentType, msg.Content, isGrp)
+	if msg.ContentType == 0 {
+		stm := "INSERT INTO messages(id, sender_id, receiver_id, msg_type, msg_content, is_group) VALUES (?, ?, ?, ?, ?, ?)"
+		_, err = db.Exec(stm, msg.MsgId, msg.SenderId, msg.ReceiverId, msg.ContentType, msg.Content, isGrp)
+	} else {
+		stm := "INSERT INTO messages(id, sender_id, receiver_id, msg_type, is_group, file_name, msg_file) VALUES (?, ?, ?, ?, ?, ?, ?)"
+		_, err = db.Exec(stm, msg.MsgId, msg.SenderId, msg.ReceiverId, msg.ContentType, isGrp, msg.FileName, msg.Content)
+	}
 	return
 }
 func UpdateConversation(cid, uid, mid uint64) (err error) {
