@@ -216,7 +216,6 @@ func UpdateIcon(c *gin.Context) {
 // GetUserInfo 获取用户信息
 func GetUserInfo(c *gin.Context) {
 	id := c.Query("id")
-	log.L().Info("GetUserInfo", log.String("id:", id))
 	uid, err := strconv.Atoi(id)
 	if err != nil {
 		c.JSON(http.StatusOK, Res(ec.ParmsInvalid, "User Id Parse Failed"))

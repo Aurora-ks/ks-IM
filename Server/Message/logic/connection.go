@@ -285,6 +285,7 @@ func getPacket(seq uint64) (p *protocol.Packet, err error) {
 		return
 	}
 	item := v.(*DataItem)
+	p = new(protocol.Packet)
 	err = proto.Unmarshal(item.Data, p)
 	return
 }

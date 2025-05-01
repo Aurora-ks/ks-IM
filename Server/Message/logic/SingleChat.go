@@ -232,7 +232,7 @@ func ackSC(con *Connection, p *protocol.Packet) {
 		}
 		ack.ConvId = &cid
 	}
-	if err = mysql.UpdateConversation(ack.GetConvId(), ack.GetLastMsgId()); err != nil {
+	if err = mysql.UpdateConversation(ack.GetConvId(), msg.ReceiverId, ack.GetLastMsgId()); err != nil {
 		log.L().Error("Update Conversation", log.Error(err), log.Any("msg", p))
 		con.SendError(p.Seq, p.Cmd)
 		return

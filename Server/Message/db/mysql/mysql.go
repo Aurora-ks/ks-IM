@@ -44,9 +44,13 @@ func SaveMessage(msg *protocol.Msg, isGroup bool) (err error) {
 	_, err = db.Exec(stm, msg.MsgId, msg.SenderId, msg.ReceiverId, msg.ContentType, msg.Content, isGrp)
 	return
 }
-func UpdateConversation(cid, mid uint64) (err error) {
-	stm := "UPDATE conversations SET last_ack_msg_id = ? WHERE id = ?"
-	_, err = db.Exec(stm, mid, cid)
+func UpdateConversation(cid, uid, mid uint64) (err error) {
+	stm := `UPDATE conversations 
+			SET 
+				u1_last_ack_msg = IF(uid1 = ?, ?, u1_last_ack_msg),
+				u2_last_ack_msg = IF(uid2 = ?, ?, u2_last_ack_msg) 
+			WHERE id = ?`
+	_, err = db.Exec(stm, uid, mid, uid, mid, cid)
 	return
 }
 func CreateNewConversation(uid uint64, pid uint64, isGroup bool) (cid uint64, err error) {
@@ -55,7 +59,7 @@ func CreateNewConversation(uid uint64, pid uint64, isGroup bool) (cid uint64, er
 		grp = 1
 	}
 
-	stm := "INSERT INTO conversations(user_id, peer_id, is_group) VALUES (?, ?, ?)"
+	stm := "INSERT INTO conversations(uid1, uid2, is_group) VALUES (?, ?, ?)"
 	res, err := db.Exec(stm, uid, pid, grp)
 	if err != nil {
 		return
@@ -65,8 +69,8 @@ func CreateNewConversation(uid uint64, pid uint64, isGroup bool) (cid uint64, er
 	return
 }
 func GetConversationID(uid, peerID uint64) (cid uint64, err error) {
-	stm := "SELECT id FROM conversations WHERE user_id = ? AND peer_id = ? AND deleted = 0"
-	err = db.QueryRow(stm, uid, peerID).Scan(&cid)
+	stm := "SELECT id FROM conversations WHERE (uid1 = ? AND uid2 = ?) OR (uid2 = ? AND uid1 = ?) AND deleted = 0"
+	err = db.QueryRow(stm, uid, peerID, uid, peerID).Scan(&cid)
 	return
 }
 func DelMsg(mid uint64) (err error) {

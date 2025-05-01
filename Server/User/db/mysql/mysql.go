@@ -245,11 +245,11 @@ func ModifyFriendAlias(id int, alias string) (err error) {
 func GetSession(uId int, isGroup bool) ([]*model.GetSessionResp, error) {
 	var stm string
 	if isGroup {
-		stm = "SELECT a.id, a.peer_id, a.is_group, a.last_ack_msg_id, b.`name` FROM conversations a JOIN `groups` b ON a.peer_id = b.id WHERE a.user_id = ? AND a.is_group = 1 AND a.deleted = 0;"
+		stm = "SELECT id, uid1, group_id, u1_last_ack_msg FROM conversations WHERE (uid1 = ? OR uid2 = ?) AND is_group = 1 AND deleted = 0;"
 	} else {
-		stm = "SELECT a.id, a.peer_id, a.is_group, a.last_ack_msg_id, b.`name`FROM conversations a JOIN `user` b ON a.peer_id = b.id WHERE a.user_id = ? AND a.is_group = 0 AND a.deleted = 0;"
+		stm = "SELECT id, uid1, uid2, u1_last_ack_msg, u2_last_ack_msg FROM conversations WHERE (uid1 = ? OR uid2 = ?) AND is_group = 0 AND deleted = 0;"
 	}
-	rows, err := db.Query(stm, uId)
+	rows, err := db.Query(stm, uId, uId)
 	if err != nil {
 		return nil, err
 	}
@@ -257,8 +257,14 @@ func GetSession(uId int, isGroup bool) ([]*model.GetSessionResp, error) {
 	sessionArray := make([]*model.GetSessionResp, 0)
 	for rows.Next() {
 		session := new(model.GetSessionResp)
-		if err = rows.Scan(&session.SessionId, &session.PeerId, &session.IsGroup, &session.LastAck, &session.Name); err != nil {
-			return nil, err
+		if isGroup {
+			if err = rows.Scan(&session.SessionId, &session.Uid1, &session.GroupId, &session.U1LastAck); err != nil {
+				return nil, err
+			}
+		} else {
+			if err = rows.Scan(&session.SessionId, &session.Uid1, &session.Uid2, &session.U1LastAck, &session.U2LastAck); err != nil {
+				return nil, err
+			}
 		}
 		sessionArray = append(sessionArray, session)
 	}

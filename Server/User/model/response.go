@@ -19,11 +19,13 @@ type AddRelGroupResp struct {
 	Id int `json:"id"`
 }
 type GetSessionResp struct {
-	SessionId int    `json:"session_id"`
-	PeerId    int    `json:"peer_id"`
-	LastAck   int    `json:"last_ack_msg_id"`
-	Name      string `json:"name"`
-	IsGroup   bool   `json:"is_group"`
+	SessionId int  `json:"session_id"`
+	Uid1      int  `json:"uid1"`
+	Uid2      int  `json:"uid2"`
+	GroupId   int  `json:"group_id"`
+	U1LastAck int  `json:"u1_last_ack_msg"`
+	U2LastAck int  `json:"u2_last_ack_msg"`
+	IsGroup   bool `json:"is_group"`
 }
 type CreateSessionResp struct {
 	SessionId int `json:"session_id"`
