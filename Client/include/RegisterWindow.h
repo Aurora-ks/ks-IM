@@ -40,7 +40,7 @@ private:
     QTimer *verifyButtonTimer_{nullptr};
     Net *http_;
     int verifyButtonInterval_{60}; // second
-    int gender_;
+    int gender_{0};
 
     void initUI();
 };

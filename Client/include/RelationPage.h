@@ -24,8 +24,10 @@ signals:
     void sendMessageClicked(FriendTreeViewItem *user);
 private slots:
     void showFriendInfo(const QModelIndex &index);
+    void showGroupInfo(const QModelIndex &index);
     void addUser();
     void addGroup();
+    void createGroup();
 private:
     ElaLineEdit *searchEdit_{nullptr};
     ElaToolButton *addButton_{nullptr};
@@ -37,6 +39,7 @@ private:
     ElaTreeView *userListView_{nullptr};
     ElaTreeView *groupListView_{nullptr};
     FriendListModel *userListModel_{nullptr};
+    FriendListModel *groupListModel_{nullptr};
     QStackedWidget *rightStacked_{nullptr};
     RelationNotifyWidget *userNotifyPage_{nullptr};
     RelationNotifyWidget *groupNotifyPage_{nullptr};
@@ -48,6 +51,8 @@ private:
 
     void initLayout();
     void initContent();
+    void getUserList();
+    void getGroupList();
 };
 
 class NoChildIndentDelegate : public QStyledItemDelegate {

@@ -38,20 +38,19 @@ void qtMessageHandler(QtMsgType type,
 }
 // 连接WebSocket
 bool wsConnect(){
-//    auto resp = Net::GetTo("/message_service");
-//    if(!resp){
-//        LOG_ERROR("[Net] ws connect failed, err:{}", resp.errorString().toStdString());
-//        return false;
-//    }
-//    auto data = resp.data();
-//    if(!data){
-//        LOG_ERROR("[Net] ws connect failed, msg:{}", data.message().toStdString());
-//        return false;
-//    }
-//    auto json = data.dataJson();
-//    if(json.empty()) qDebug() << "Empty";
-//    QString url = QString("ws://%1:%2/login/%3").arg(json["ip"].toString()).arg(json["port"].toInt()).arg(User::GetUid());
-    QString url = QString("ws://127.0.0.1:9999/login/%3").arg(User::GetUid());
+    auto resp = Net::GetTo("/message_service");
+    if(!resp){
+        LOG_ERROR("[Net] ws connect failed, err:{}", resp.errorString().toStdString());
+        return false;
+    }
+    auto data = resp.data();
+    if(!data){
+        LOG_ERROR("[Net] ws connect failed, msg:{}", data.message().toStdString());
+        return false;
+    }
+    auto json = data.dataJson();
+    QString url = QString("ws://%1:%2/login/%3").arg(json["ip"].toString()).arg(json["port"].toInt()).arg(User::GetUid());
+//    QString url = QString("ws://127.0.0.1:9999/login/%3").arg(User::GetUid());
     return WsIns.connectToServer(url);
 }
 

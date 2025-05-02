@@ -30,7 +30,8 @@ private:
     QStackedWidget *messageStack_{nullptr};
     MessageDelegate *messageDelegate_{nullptr};
     QMap<int64_t, ElaListView*> messageViewMap_; // sessionId-messageList
-    QMap<int64_t, int64_t> peer2SessionMap_; // peerId-sessionId
+    QMap<int64_t, int64_t> userPeer2SessionMap_; // peerId-sessionId
+    QMap<int64_t, int64_t> groupPeer2SessionMap_; // peerId-sessionId
     QMap<int64_t, int64_t> session2PeerMap_; // sessionId-peerId
 
     void initLayout();

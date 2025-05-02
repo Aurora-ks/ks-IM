@@ -42,6 +42,7 @@ RelationPage::RelationPage(QWidget *parent) : QWidget(parent) {
     });
     connect(userListView_, &ElaTreeView::clicked, this, &RelationPage::showFriendInfo);
     connect(userInfoWidget_, &UserInfoCard::groupingChanged, userListModel_, &FriendListModel::updateFriendGrouping);
+    connect(groupListView_, &ElaTreeView::clicked, this, &RelationPage::showGroupInfo);
     connect(eTheme, &ElaTheme::themeModeChanged, [this](ElaThemeType::ThemeMode themeMode) {
         if (themeMode == ElaThemeType::ThemeMode::Light){
             userListView_->setStyleSheet("ElaTreeView::item{height:50px;}");
@@ -89,10 +90,13 @@ void RelationPage::initLayout() {
 //    addMenu->addMenu("添加群组");
     QAction *addUserAction = new QAction("添加用户", this);
     QAction *addGroupAction = new QAction("添加群组", this);
+    QAction *createGroupAction = new QAction("创建群组", this);
     connect(addUserAction, &QAction::triggered, this, &RelationPage::addUser);
     connect(addGroupAction, &QAction::triggered, this, &RelationPage::addGroup);
+    connect(createGroupAction, &QAction::triggered, this, &RelationPage::createGroup);
     addMenu->addAction(addUserAction);
     addMenu->addAction(addGroupAction);
+    addMenu->addAction(createGroupAction);
     addButton_->setMenu(addMenu);
 
     QHBoxLayout *addButtonHLayout = new QHBoxLayout();
@@ -159,6 +163,9 @@ void RelationPage::initLayout() {
     groupListView_->setHeaderHidden(true);
     groupListView_->setItemDelegate(new NoChildIndentDelegate(this));
     groupListView_->setIconSize(QSize(40, 40));
+    // TODO: group list model
+    groupListModel_ = new FriendListModel(this);
+    groupListView_->setModel(groupListModel_);
 
     leftStacked_->setContentsMargins(0, 0, 0, 0);
     leftStacked_->addWidget(userListView_);
@@ -211,6 +218,179 @@ void RelationPage::initLayout() {
 }
 
 void RelationPage::initContent() {
+    getUserList();
+    getGroupList();
+}
+
+void RelationPage::showFriendInfo(const QModelIndex &index) {
+    if (!index.parent().isValid()) return;
+
+    QStandardItem *friendItem = dynamic_cast<QStandardItemModel*>(userListView_->model())->itemFromIndex(index);
+    if (!friendItem) return;
+
+    FriendTreeViewItem *item = friendItem->data(FriendListModel::DataRole).value<FriendTreeViewItem*>();
+    if(!item) return;
+    userInfoWidget_->updateUserInfo(item);
+    rightStacked_->setCurrentWidget(userInfoWidget_);
+}
+
+void RelationPage::showGroupInfo(const QModelIndex &index) {
+    if (!index.parent().isValid()) return;
+
+    QStandardItem *friendItem = dynamic_cast<QStandardItemModel*>(groupListView_->model())->itemFromIndex(index);
+    if (!friendItem) return;
+
+    FriendTreeViewItem *item = friendItem->data(FriendListModel::DataRole).value<FriendTreeViewItem*>();
+    if(!item) return;
+    userInfoWidget_->updateUserInfo(item);
+    rightStacked_->setCurrentWidget(userInfoWidget_);
+}
+
+void RelationPage::addGroup() {
+    QString groupId = searchEdit_->text();
+    if(groupId.isEmpty()) return;
+    searchEdit_->clear();
+
+//    QJsonObject json;
+//    json["user_id"] = User::GetUid();
+//    json["group_id"] = groupId.toLongLong();
+//    auto resp = Net::PostTo("/grp/join", QJsonDocument(json).toJson());
+//    if(!resp){
+//        qWarning() << "[Net] [RelationPage::addGroup] join group net work failed, err:" << resp.errorString();
+//        ElaMessageBar::error(ElaMessageBarType::PositionPolicy::Top, "网络错误", "加入群组失败", 2000);
+//        return;
+//    }
+//
+//    auto data = resp.data();
+//    if(!data){
+//        qWarning() << "[Net] [RelationPage::addGroup] join group error, code: " << data.code() << ", message: " << data.message();
+//        ElaMessageBar::error(ElaMessageBarType::PositionPolicy::Top, "网络错误", "加入群组失败", 2000);
+//        return;
+//    }
+//
+//    // 刷新群组列表
+//    QMap<QString, QString> query;
+//    query.insert("uid", QString::number(User::GetUid()));
+//    resp = Net::GetTo("/grp/list", query);
+//    if(!resp || !resp.data()) {
+//        qWarning() << "[Net] [RelationPage::addGroup] refresh group list failed";
+//        return;
+//    }
+//
+//    json = resp.data();
+//    groupListModel_->clear();
+//
+//    auto groupListData = json.dataArray();
+//    for(const auto &value : groupListData){
+//        if(value.isObject()){
+//            auto obj = value.toObject();
+//            QStandardItem *item = new QStandardItem();
+//
+//            QString groupName = obj.value("name").toString();
+//            QString groupIcon = obj.value("icon").toString();
+//            int64_t groupId = obj.value("id").toInteger();
+//
+//            item->setText(groupName);
+//            item->setIcon(QIcon(groupIcon));
+//            item->setData(groupId, Qt::UserRole);
+//
+//            groupListModel_->appendRow(item);
+//        }
+//    }
+}
+
+void RelationPage::addUser() {
+    QString id = searchEdit_->text();
+    if(id.isEmpty()) return;
+    searchEdit_->clear();
+
+    QJsonObject json;
+    json["user_id"] = User::GetUid();
+    json["friend_id"] = id.toLongLong();
+    json["remark"] = "";
+    auto resp = Net::PostTo("/rel/add-friend", QJsonDocument(json).toJson());
+    if(!resp){
+        qWarning() << "[Net] [RelationPage::addUser] add user net work failed, err:" << resp.errorString();
+        return;
+    }
+    auto data = resp.data();
+    if(!data){
+        qWarning() << "[Net] [RelationPage::addUser] add user error, code: " << data.code() << ", message: " << data.message();
+        return;
+    }
+    auto dataJson = data.dataJson();
+    if(dataJson.isEmpty()){
+        qWarning() << "[Net] [RelationPage::addUser] add user received invalid";
+        return;
+    }
+    // TODO: refresh
+    userListModel_->clear();
+    getUserList();
+}
+
+void RelationPage::createGroup() {
+    QString name = searchEdit_->text();
+    if(name.isEmpty()) return;
+    searchEdit_->clear();
+
+    QJsonObject json;
+    json["name"] = name;
+    json["create_id"] = User::GetUid();
+    json["public"] = 1;
+
+    auto resp = Net::PostTo("/grp/new", QJsonDocument(json).toJson());
+    if(!resp){
+        qWarning() << "[Net] [RelationPage::createGroup] create group net work failed, err:" << resp.errorString();
+        ElaMessageBar::error(ElaMessageBarType::PositionPolicy::Top, "网络错误", "创建群组失败", 2000);
+        return;
+    }
+
+    auto data = resp.data();
+    if(!data){
+        qWarning() << "[Net] [RelationPage::createGroup] create group error, code: " << data.code() << ", message: " << data.message();
+        ElaMessageBar::error(ElaMessageBarType::PositionPolicy::Top, "网络错误", "创建群组失败", 2000);
+        return;
+    }
+    // TODO: refresh
+    groupListModel_->clear();
+    getGroupList();
+}
+
+void RelationPage::getGroupList() {
+    // 获取群组
+    // TODO: 完善群组展示
+    groupListModel_->addGroup(0, "我的群组");
+    QMap<QString, QString> query;
+    query["uid"] = QString::number(User::GetUid());
+    auto resp = Net::GetTo("/grp/list", query);
+    if(!resp){
+        qWarning() << "[Net] [RelationPage::initContent] get group list net work failed, err:" << resp.errorString();
+        ElaMessageBar::error(ElaMessageBarType::PositionPolicy::Top, "网络错误", "获取群组列表失败", 2000);
+        return;
+    }
+
+    auto json = resp.data();
+    if(!json){
+        qWarning() << "[Net] [RelationPage::initContent] get group list error, code: " << json.code() << ", message: " << json.message();
+        ElaMessageBar::error(ElaMessageBarType::PositionPolicy::Top, "网络错误", "获取群组列表失败", 2000);
+        return;
+    }
+    auto groupListData = json.dataArray();
+    for(const auto &value : groupListData){
+        if(value.isObject()){
+            auto obj = value.toObject();
+            FriendTreeViewItem *item = new FriendTreeViewItem();
+            item->setRelationId(obj.value("id").toInteger());
+            int64_t groupId = obj.value("group_id").toInteger();
+            // 这个id是分组的id，这里当成群组id
+            item->setGroupId(0);
+            item->setUser(User(groupId, "grp", 1, "", "", ""));
+            groupListModel_->addFriend(item);
+        }
+    }
+}
+
+void RelationPage::getUserList() {
     // 获取组列表
     userListModel_->addGroup(0, "我的好友");
     QMap<QString, QString> query;
@@ -272,53 +452,4 @@ void RelationPage::initContent() {
             userListModel_->addFriend(item);
         }
     }
-}
-
-void RelationPage::showFriendInfo(const QModelIndex &index) {
-    if (!index.parent().isValid()) return;
-
-    QStandardItem *friendItem = dynamic_cast<QStandardItemModel*>(userListView_->model())->itemFromIndex(index);
-    if (!friendItem) return;
-
-    FriendTreeViewItem *item = friendItem->data(FriendListModel::DataRole).value<FriendTreeViewItem*>();
-    if(!item) return;
-    userInfoWidget_->updateUserInfo(item);
-    rightStacked_->setCurrentWidget(userInfoWidget_);
-}
-
-void RelationPage::addGroup() {
-    // TODO
-    QString id = searchEdit_->text();
-    if(id.isEmpty()) return;
-    searchEdit_->clear();
-    qInfo() << "add Group:" << id;
-}
-
-void RelationPage::addUser() {
-    QString id = searchEdit_->text();
-    if(id.isEmpty()) return;
-    searchEdit_->clear();
-
-    QJsonObject json;
-    json["user_id"] = User::GetUid();
-    json["friend_id"] = id.toLongLong();
-    json["remark"] = "";
-    auto resp = Net::PostTo("/rel/add-friend", QJsonDocument(json).toJson());
-    if(!resp){
-        qWarning() << "[Net] [RelationPage::addUser] add user net work failed, err:" << resp.errorString();
-        return;
-    }
-    auto data = resp.data();
-    if(!data){
-        qWarning() << "[Net] [RelationPage::addUser] add user error, code: " << data.code() << ", message: " << data.message();
-        return;
-    }
-    auto dataJson = data.dataJson();
-    if(dataJson.isEmpty()){
-        qWarning() << "[Net] [RelationPage::addUser] add user received invalid";
-        return;
-    }
-
-    int64_t relId = dataJson["id"].toInteger();
-    qDebug() << "add user relation id:" << relId;
 }

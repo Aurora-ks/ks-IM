@@ -108,7 +108,7 @@ void SessionPage::initLayout() {
 
         // 使用WebSocket发送消息
         QByteArray content = message.toUtf8();
-        uint64_t seq = WsIns.sendSingleChatMessage(sessionId, session2PeerMap_.key(sessionId), content, 0);
+        uint64_t seq = WsIns.sendSingleChatMessage(sessionId, session2PeerMap_.value(sessionId), content, 0);
         if (seq == 0) {
             ElaMessageBar::error(ElaMessageBarType::PositionPolicy::Top, "发送失败", "消息发送失败，请检查网络连接",
                                  2000, this);
@@ -117,6 +117,7 @@ void SessionPage::initLayout() {
 
         // 添加到本地消息列表
         model->addMessage(message, 1, seq);
+        sessionModel_->updateSession(sessionId, message, QDateTime::currentDateTime().toString("hh:mm:ss"), 0);
         view->scrollToBottom();
     });
 
@@ -150,6 +151,7 @@ void SessionPage::initLayout() {
         // 添加图片消息到列表
         QImage image = QImage::fromData(imageData);
         model->addMessage(image, 1, 0);
+        sessionModel_->updateSession(sessionId, fileName, QDateTime::currentDateTime().toString("hh:mm:ss"), 0);
         view->scrollToBottom();
     });
 
@@ -192,6 +194,7 @@ void SessionPage::initLayout() {
         finfo.fileSize = fileInfo.size();
         finfo.filePath = filePath;
         model->addMessage(finfo, 1, seq);
+        sessionModel_->updateSession(sessionId, fileName, QDateTime::currentDateTime().toString("hh:mm:ss"), 0);
         view->scrollToBottom();
     });
 
@@ -319,7 +322,7 @@ void SessionPage::initConnect() {
 
         QString name = d.dataJson()["name"].toString();
         sessionModel_->addSession(sessionId, name, lastAck, false);
-        peer2SessionMap_.insert(peerId, sessionId);
+        userPeer2SessionMap_.insert(peerId, sessionId);
         session2PeerMap_.insert(sessionId, peerId);
         addMessageView(sessionId);
     }
@@ -333,8 +336,8 @@ void SessionPage::selectOrCreateSession(FriendTreeViewItem *user) {
     if (!user || !sessionModel_ || !sessionList_) return;
     // 查找是否已存在该用户的会话
     int64_t uId = user->getUser().getUserID();
-    if (peer2SessionMap_.contains(uId)) {
-        int64_t sessionId = peer2SessionMap_.value(uId);
+    if (userPeer2SessionMap_.contains(uId)) {
+        int64_t sessionId = userPeer2SessionMap_.value(uId);
         QModelIndex index = sessionModel_->indexFromItem(sessionModel_->getSessionItem(sessionId));
         sessionList_->setCurrentIndex(index);
     } else {
@@ -366,7 +369,7 @@ void SessionPage::selectOrCreateSession(FriendTreeViewItem *user) {
 
         int64_t sid = json["session_id"].toInteger();
         QString name = user->getAlias().isEmpty() ? user->getUser().getUserName() : user->getAlias();
-        peer2SessionMap_.insert(uId, sid);
+        userPeer2SessionMap_.insert(uId, sid);
         sessionModel_->addSession(sid, name, 0, false);
 
         // 选中新创建的会话
@@ -423,10 +426,11 @@ void SessionPage::onMessageReceived(uint64_t seq, const protocol::Msg &message) 
     if (!dir.exists(userDataDir)) {
         dir.mkpath(userDataDir);
     }
-
+    QString msg;
     // 根据消息类型处理
     if (message.content_type() == 0) { // 文本消息
         QString content = QString::fromUtf8(message.content().data(), message.content().size());
+        msg = content;
         model->addMessage(content, 0, seq);
     } else if (message.content_type() == 1) { // 图片消息
         QByteArray imageData(message.content().data(), message.content().size());
@@ -441,9 +445,9 @@ void SessionPage::onMessageReceived(uint64_t seq, const protocol::Msg &message) 
             // 保存图片
             QString imagePath = QString("%1/%2.png").arg(imageDir).arg(
                     QString::fromStdString(message.file_name()));
-            if (image.save(imagePath)) {
-                model->addMessage(image, 0, seq);
-            }
+            image.save(imagePath);
+            model->addMessage(image, 0, seq);
+            msg = QString::fromStdString(message.file_name());
         }
     } else if (message.content_type() == 2) { // 文件消息
         QByteArray fileData(message.content().data(), message.content().size());
@@ -454,24 +458,24 @@ void SessionPage::onMessageReceived(uint64_t seq, const protocol::Msg &message) 
             dir.mkpath(fileDir);
         }
 
-        // 从消息中获取原始文件名（如果有的话）
+        // 从消息中获取原始文件名
         QString fileName = QString::fromStdString(message.file_name());
         QString filePath = fileDir + QDir::separator() + fileName;
 
         QFile file(filePath);
+        MessageList::FileInfo finfo;
+        finfo.fileName = fileName;
+        finfo.filePath = filePath;
         if (file.open(QIODevice::WriteOnly)) {
             file.write(fileData);
             file.close();
-
-            QFileInfo fileInfo(filePath);
-            MessageList::FileInfo finfo;
-            finfo.fileName = fileName;
-            finfo.fileSize = fileInfo.size();
-            finfo.filePath = filePath;
-            model->addMessage(finfo, 0, seq);
         }
+        QFileInfo fileInfo(filePath);
+        finfo.fileSize = fileInfo.size();
+        model->addMessage(finfo, 0, seq);
+        msg = QString::fromStdString(message.file_name());
     }
-
+    sessionModel_->updateSession(sessionId, msg, QDateTime::currentDateTime().toString("hh:mm:ss"), 0);
     // 滚动到底部
     view->scrollToBottom();
 }

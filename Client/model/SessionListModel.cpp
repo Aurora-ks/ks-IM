@@ -140,7 +140,22 @@ void SessionListModel::addSession(int64_t sessionId, const QString &name, int64_
 }
 
 void SessionListModel::updateSession(int64_t sessionId, const QString &message, const QString &time, int unreadCount) {
-
+    QStandardItem* item = getSessionItem(sessionId);
+    if (!item) {
+        qWarning() << "[SessionListModel::updateSession] session not found, sessionId:" << sessionId;
+        return;
+    }
+    if (!message.isEmpty()) {
+        item->setData(message, MessageRole);
+    }
+    if (!time.isEmpty()) {
+        item->setData(time, TimeRole);
+    }
+    if (unreadCount >= 0) {
+        item->setData(unreadCount, UnreadCountRole);
+    }
+    QModelIndex index = indexFromItem(item);
+    emit dataChanged(index, index);
 }
 
 QStandardItem* SessionListModel::getSessionItem(int64_t sessionId) {
