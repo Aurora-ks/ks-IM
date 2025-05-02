@@ -184,6 +184,21 @@ func AddFriend(userId, friendId int, remark string) (id int64, err error) {
 	return
 }
 
+// AddFriend1 添加好友申请 TODO:临时使用
+func AddFriend1(userId, friendId int, remark string) (int64, error) {
+	stm := "INSERT INTO friend_relationships(user_id, friend_id, remark, status) VALUES (?, ?, ?, 1)"
+	res, err := db.Exec(stm, userId, friendId, remark)
+	if err != nil {
+		return 0, err
+	}
+	id, err := res.LastInsertId()
+	if err != nil {
+		return 0, err
+	}
+	_, err = db.Exec(stm, friendId, userId, remark)
+	return id, err
+}
+
 // RespNewFriend 响应好友申请
 func RespNewFriend(id int, option int) (err error) {
 	stm := "UPDATE friend_relationships SET status = ? WHERE id = ?"
@@ -273,8 +288,13 @@ func GetSession(uId int, isGroup bool) ([]*model.GetSessionResp, error) {
 
 // NewSession 创建会话
 func NewSession(uId, peerId int, isGroup bool) (*model.CreateSessionResp, error) {
-	stm := "INSERT INTO conversations(user_id, peer_id, is_group) VALUES (?, ?, ?)"
-	res, err := db.Exec(stm, uId, peerId, isGroup)
+	var stm string
+	if isGroup {
+		stm = "INSERT INTO conversations(uid1, group_id, is_group) VALUES (?, ?, 1)"
+	} else {
+		stm = "INSERT INTO conversations(uid1, uid2, is_group) VALUES (?, ?, 0)"
+	}
+	res, err := db.Exec(stm, uId, peerId)
 	if err != nil {
 		return nil, err
 	}
@@ -287,12 +307,16 @@ func NewSession(uId, peerId int, isGroup bool) (*model.CreateSessionResp, error)
 
 // NewGroup 创建群组
 func NewGroup(uid int, name, description string, isPublic int) (gId int64, err error) {
-	stm := "INSERT INTO groups(creator_id, name, description, public) VALUES (?, ?, ?, ?)"
+	// 创建群组
+	stm := "INSERT INTO `groups`(creator_id, `name`, description, public) VALUES (?, ?, ?, ?)"
 	res, err := db.Exec(stm, uid, name, description, isPublic)
 	if err != nil {
 		return
 	}
 	gId, err = res.LastInsertId()
+	// 添加群组成员
+	stm = "INSERT INTO group_members(user_id, group_id, role) VALUES (?, ?, 1)"
+	_, err = db.Exec(stm, uid, gId)
 	return
 }
 

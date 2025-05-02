@@ -79,7 +79,8 @@ func AddFriend(c *gin.Context) {
 		log.L().Error("Add Friend Body Parse Json")
 		return
 	}
-	id, err := mysql.AddFriend(req.UserID, req.FriendID, req.Remark)
+	//id, err := mysql.AddFriend(req.UserID, req.FriendID, req.Remark)
+	id, err := mysql.AddFriend1(req.UserID, req.FriendID, req.Remark)
 	if err != nil {
 		c.JSON(http.StatusOK, Res(ec.DBInsert, "Add Friend Failed"))
 		log.L().Error("Add Friend Failed", log.Error(err))
