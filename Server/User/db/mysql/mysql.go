@@ -567,3 +567,39 @@ func ModifyGroupMemberRole(userID, groupID, role int) (err error) {
 	_, err = db.Exec(stm, role, userID, groupID)
 	return
 }
+
+// GetOfflineMsg 获取离线消息
+func GetOfflineMsg(sessionId, userID, senderID, lastAck int) (list []*model.OfflineMsgResp, err error) {
+	stm := "SELECT id, msg_type, IFNULL(msg_content, ''), IFNULL(file_name, ''), IFNULL(msg_file, ''), created_at FROM messages WHERE sender_id = ? AND receiver_id = ? AND id > ? AND deleted = 0"
+	rows, err := db.Query(stm, senderID, userID, lastAck)
+	if err != nil {
+		return
+	}
+	defer rows.Close()
+	list = make([]*model.OfflineMsgResp, 0)
+	for rows.Next() {
+		offlineMsg := new(model.OfflineMsgResp)
+		if err = rows.Scan(&offlineMsg.MsgId, &offlineMsg.MsgType, &offlineMsg.Content, &offlineMsg.FileName, &offlineMsg.FileContent, &offlineMsg.CreateTime); err != nil {
+			return
+		}
+		list = append(list, offlineMsg)
+	}
+	if len(list) == 0 {
+		return
+	}
+	// 更新ack
+	stm = "SELECT uid1, uid2 FROM conversations WHERE id = ?"
+	var id1, id2 int
+	err = db.QueryRow(stm, sessionId).Scan(&id1, &id2)
+	if err != nil {
+		return
+	}
+
+	if id1 == userID {
+		stm = "UPDATE conversations SET u1_last_ack_msg = ? WHERE id = ?"
+	} else {
+		stm = "UPDATE conversations SET u2_last_ack_msg = ? WHERE id = ?"
+	}
+	_, err = db.Exec(stm, list[len(list)-1].MsgId, sessionId)
+	return
+}

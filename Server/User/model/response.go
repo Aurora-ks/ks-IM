@@ -1,5 +1,7 @@
 package model
 
+import "time"
+
 // user
 
 type RegisterResp struct {
@@ -35,4 +37,15 @@ type CreateSessionResp struct {
 
 type NewGroupResp struct {
 	Id int `json:"id"`
+}
+
+// message
+
+type OfflineMsgResp struct {
+	MsgId       int       `json:"msg_id"`
+	MsgType     int       `json:"msg_type"`
+	Content     string    `json:"text_content"`
+	FileName    string    `json:"file_name"`
+	FileContent []byte    `json:"file_content"`
+	CreateTime  time.Time `json:"create_time"`
 }

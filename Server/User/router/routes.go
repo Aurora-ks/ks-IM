@@ -56,5 +56,8 @@ func SetUp() *gin.Engine {
 	GrpGroup.GET("/members", logic.GetGroupMemberList)
 	GrpGroup.POST("/quit", logic.QuitGroup)
 	GrpGroup.POST("/member-role", logic.ModifyGroupMemberRole)
+
+	MsgGroup := apiGroup.Group("/msg")
+	MsgGroup.GET("/offline", logic.GetOfflineMsg)
 	return r
 }
