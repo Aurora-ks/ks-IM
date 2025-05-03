@@ -296,10 +296,10 @@ void SessionPage::initConnect() {
         int64_t peerId, lastAck;
         if (obj["uid1"].toInteger() == User::GetUid()) {
             peerId = obj["uid2"].toInteger();
-            lastAck = obj["uid2_last_ack_msg_id"].toInteger();
+            lastAck = obj["u1_last_ack_msg"].toInteger();
         } else {
             peerId = obj["uid1"].toInteger();
-            lastAck = obj["uid1_last_ack_msg_id"].toInteger();
+            lastAck = obj["u2_last_ack_msg"].toInteger();
         }
 
         // 获取对方名称
@@ -325,7 +325,101 @@ void SessionPage::initConnect() {
         userPeer2SessionMap_.insert(peerId, sessionId);
         session2PeerMap_.insert(sessionId, peerId);
         addMessageView(sessionId);
+
+        // 获取离线消息
+        QMap<QString, QString> msgQuery;
+        msgQuery["uid"] = QString::number(User::GetUid());
+        msgQuery["sender_id"] = QString::number(peerId);
+        msgQuery["last_ack"] = QString::number(lastAck);
+        msgQuery["session_id"] = QString::number(sessionId);
+
+        auto msgResp = Net::GetTo("/msg/offline", msgQuery);
+        if (!msgResp) {
+            qWarning() << "[Net] [SessionPage::initConnect] get offline messages failed, err:" << msgResp.errorString();
+            continue;
+        }
+
+        auto msgData = msgResp.data();
+        if (!msgData) {
+            qWarning() << "[Net] [SessionPage::initConnect] get offline messages error, code:" << msgData.code() << " msg:" << msgData.message();
+            continue;
+        }
+
+        auto msgArray = msgData.dataArray();
+        if (msgArray.empty()) continue;
+
+        // 获取消息视图和模型
+        ElaListView *view = messageViewMap_.value(sessionId);
+        if (!view) continue;
+        MessageListModel *model = static_cast<MessageListModel *>(view->model());
+
+        // 处理每条离线消息
+        for (auto msg: msgArray) {
+            auto msgObj = msg.toObject();
+            if (msgObj.empty()) continue;
+
+            int msgType = msgObj["msg_type"].toInteger();
+            QString msgContent = msgObj["text_content"].toString();
+            QString fileName = msgObj["file_name"].toString();
+            QByteArray fileContent = QByteArray::fromBase64(msgObj["file_content"].toString().toUtf8());
+            QString createTime = msgObj["create_time"].toString();
+
+            // 转换时间格式
+            QDateTime dateTime = QDateTime::fromString(createTime, Qt::ISODate);
+            QString formattedTime = dateTime.toString("yy-MM-dd hh:mm:ss");
+
+            // 根据消息类型处理
+            if (msgType == 0) { // 文本消息
+                model->addMessage(msgContent, 0, msgObj["msg_id"].toInteger());
+            } else if (msgType == 1) { // 图片消息
+                QImage image = QImage::fromData(fileContent);
+                if (!image.isNull()) {
+                    // 创建图片保存目录
+                    QString userDataDir = QString("data/%1").arg(User::GetUid());
+                    QString imageDir = userDataDir + "/image";
+                    QDir dir;
+                    if (!dir.exists(imageDir)) {
+                        dir.mkpath(imageDir);
+                    }
+
+                    // 保存图片
+                    QString imagePath = QString("%1/%2").arg(imageDir).arg(fileName);
+                    image.save(imagePath);
+                    model->addMessage(image, 0, msgObj["msg_id"].toInteger());
+                }
+            } else if (msgType == 2) { // 文件消息
+                // 创建文件保存目录
+                QString userDataDir = QString("data/%1").arg(User::GetUid());
+                QString fileDir = userDataDir + "/file";
+                QDir dir;
+                if (!dir.exists(fileDir)) {
+                    dir.mkpath(fileDir);
+                }
+
+                // 保存文件
+                QString filePath = fileDir + QDir::separator() + fileName;
+                QFile file(filePath);
+                if (file.open(QIODevice::WriteOnly)) {
+                    file.write(fileContent);
+                    file.close();
+
+                    MessageList::FileInfo finfo;
+                    finfo.fileName = fileName;
+                    finfo.filePath = filePath;
+                    QFileInfo fileInfo(filePath);
+                    finfo.fileSize = fileInfo.size();
+                    model->addMessage(finfo, 0, msgObj["msg_id"].toInteger());
+                }
+            }
+
+            // 更新会话列表中的最后一条消息
+            sessionModel_->updateSession(sessionId, msgContent, formattedTime, 0);
+        }
+
+        // 滚动到底部
+        view->scrollToBottom();
     }
+
     // 选中第一个session
     QModelIndex firstIndex = sessionModel_->index(0, 0);
     sessionList_->setCurrentIndex(firstIndex);
