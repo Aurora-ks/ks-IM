@@ -173,6 +173,12 @@ func SetUp() *gin.Engine {
 	grp.POST("/member-role", func(context *gin.Context) {
 		forwardRequest(context, "user")
 	})
+	// 消息服务
+	msg := r.Group("/msg")
+	// 获取离线消息
+	msg.GET("/offline", func(context *gin.Context) {
+		forwardRequest(context, "user")
+	})
 	return r
 }
 
