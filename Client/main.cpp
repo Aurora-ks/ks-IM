@@ -8,7 +8,7 @@
 #include "user.h"
 #include "setting.h"
 #include "ws.h"
-#define DEBUG 1
+#define DEBUG 0
 // Qt消息处理器（将Qt日志转发到spdlog）
 void qtMessageHandler(QtMsgType type,
                       const QMessageLogContext &context,

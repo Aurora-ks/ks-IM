@@ -10,7 +10,7 @@
 
 #define  RELEASE_MOD 1
 #if RELEASE_MOD
-#define HTTP_PREFIX "http://139.199.221.81"
+#define HTTP_PREFIX "http://127.0.0.1"
 #else
 #define HTTP_PREFIX "http://127.0.0.1"
 #endif
