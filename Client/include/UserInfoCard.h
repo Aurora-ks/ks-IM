@@ -25,6 +25,7 @@ private slots:
 public slots:
     void updateUserInfo(FriendTreeViewItem *user);
     void updateGrouping();
+    void updateGroupingList();
 private:
     QLabel *avatar_{nullptr};
     ElaText *name_{nullptr};

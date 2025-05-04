@@ -84,19 +84,18 @@ void RelationPage::initLayout() {
     addButton_->setText("添加");
 
     ElaMenu *addMenu = new ElaMenu(this);
-//    addMenu->addElaIconAction(ElaIconType::CircleUser, "添加用户");
-//    addMenu->addElaIconAction(ElaIconType::UserGroup, "添加群组");
-//    addMenu->addMenu("添加用户");
-//    addMenu->addMenu("添加群组");
     QAction *addUserAction = new QAction("添加用户", this);
     QAction *addGroupAction = new QAction("添加群组", this);
     QAction *createGroupAction = new QAction("创建群组", this);
+    QAction *createGroupingAction = new QAction("创建分组", this);
     connect(addUserAction, &QAction::triggered, this, &RelationPage::addUser);
     connect(addGroupAction, &QAction::triggered, this, &RelationPage::addGroup);
     connect(createGroupAction, &QAction::triggered, this, &RelationPage::createGroup);
+    connect(createGroupingAction, &QAction::triggered, this, &RelationPage::createGrouping);
     addMenu->addAction(addUserAction);
     addMenu->addAction(addGroupAction);
     addMenu->addAction(createGroupAction);
+    addMenu->addAction(createGroupingAction);
     addButton_->setMenu(addMenu);
 
     QHBoxLayout *addButtonHLayout = new QHBoxLayout();
@@ -354,6 +353,37 @@ void RelationPage::createGroup() {
     // TODO: refresh
     groupListModel_->clear();
     getGroupList();
+}
+
+void RelationPage::createGrouping() {
+    QString name = searchEdit_->text();
+    if(name.isEmpty()) return;
+    searchEdit_->clear();
+
+    QJsonObject json;
+    json["user_id"] = User::GetUid();
+    json["name"] = name;
+
+    auto resp = Net::PostTo("/rel/add-group", QJsonDocument(json).toJson());
+    if(!resp){
+        qWarning() << "[Net] [RelationPage::createGrouping] create grouping net work failed, err:" << resp.errorString();
+        ElaMessageBar::error(ElaMessageBarType::PositionPolicy::Top, "网络错误", "创建分组失败", 2000);
+        return;
+    }
+
+    auto data = resp.data();
+    if(!data){
+        qWarning() << "[Net] [RelationPage::createGrouping] create grouping error, code: " << data.code() << ", message: " << data.message();
+        ElaMessageBar::error(ElaMessageBarType::PositionPolicy::Top, "网络错误", "创建分组失败", 2000);
+        return;
+    }
+
+    // 刷新分组列表
+    userListModel_->clear();
+    getUserList();
+
+    // 更新UserInfoCard中的分组列表
+    userInfoWidget_->updateGroupingList();
 }
 
 void RelationPage::getGroupList() {

@@ -188,3 +188,46 @@ void UserInfoCard::updateUserGrouping(int index) {
     user_->setGroupId(newGroupId);
     emit groupingChanged(oldGroupId, user_);
 }
+
+void UserInfoCard::updateGroupingList() {
+    // 清空现有分组
+    groupingComboBox_->clear();
+    groupingMap_.clear();
+
+    // 添加默认分组
+    groupingComboBox_->addItem("我的好友", 0);
+    groupingMap_.insert(0, "我的好友");
+
+    // 获取最新分组列表
+    QMap<QString, QString> query;
+    query["uid"] = QString::number(User::GetUid());
+    auto resp = Net::GetTo("/rel/friend_grouping", query);
+    if(!resp){
+        qWarning() << "[Net] [UserInfoCard::updateGroupingList] update grouping list net work failed, err:" << resp.errorString();
+        ElaMessageBar::error(ElaMessageBarType::PositionPolicy::Top, "网络错误", "获取好友分组失败", 2000);
+        return;
+    }
+
+    auto json = resp.data();
+    if(!json){
+        qWarning() << "[Net] [UserInfoCard::updateGroupingList] update grouping list error, code: " << json.code() << ", message: " << json.message();
+        ElaMessageBar::error(ElaMessageBarType::PositionPolicy::Top, "网络错误", "获取好友分组失败", 2000);
+        return;
+    }
+
+    auto groupingData = json.dataArray();
+    for(const auto &value : groupingData){
+        if(value.isObject()){
+            auto obj = value.toObject();
+            QString name = obj.value("name").toString();
+            int64_t id = obj.value("id").toInteger();
+            groupingComboBox_->addItem(name, id);
+            groupingMap_.insert(id, name);
+        }
+    }
+
+    // 如果当前有选中的用户，更新其分组显示
+    if(user_ != nullptr) {
+        groupingComboBox_->setCurrentText(groupingMap_.value(user_->getGroupId()));
+    }
+}

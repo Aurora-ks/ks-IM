@@ -28,6 +28,7 @@ private slots:
     void addUser();
     void addGroup();
     void createGroup();
+    void createGrouping(); // 创建好友分组
 private:
     ElaLineEdit *searchEdit_{nullptr};
     ElaToolButton *addButton_{nullptr};
